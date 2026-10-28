@@ -1,0 +1,80 @@
+
+=== http://127.0.0.1:8080/free-audit/ [desktop]
+  FAIL form#0 back-navigation       Field "type" lost its value on back-navigation (expected "true", got "audit"). This is the exact defect class found in the source video.
+       repro: Fill the form, navigate away, press Back, inspect "type".
+  FAIL form#0 happy path            Valid submission produced NO network POST and no navigation — the lead is silently dropped.
+       repro: Fill the form correctly and submit; watch the network tab for a POST.
+
+=== http://127.0.0.1:8080/free-audit/ [mobile]
+  FAIL form#0 back-navigation       Field "type" lost its value on back-navigation (expected "true", got "audit"). This is the exact defect class found in the source video.
+       repro: Fill the form, navigate away, press Back, inspect "type".
+  FAIL form#0 happy path            Valid submission produced NO network POST and no navigation — the lead is silently dropped.
+       repro: Fill the form correctly and submit; watch the network tab for a POST.
+
+=== http://127.0.0.1:8080/contact/ [desktop]
+  FAIL form#0 happy path            Valid submission produced NO network POST and no navigation — the lead is silently dropped.
+       repro: Fill the form correctly and submit; watch the network tab for a POST.
+
+=== http://127.0.0.1:8080/contact/ [mobile]
+  FAIL form#0 happy path            Valid submission produced NO network POST and no navigation — the lead is silently dropped.
+       repro: Fill the form correctly and submit; watch the network tab for a POST.
+
+=== http://127.0.0.1:8080/ [desktop]
+  SKIP forms present                No <form> element on the page.
+
+=== http://127.0.0.1:8080/ [mobile]
+  SKIP forms present                No <form> element on the page.
+
+=== http://127.0.0.1:8080/ [desktop]
+  PASS page loads                   HTTP 200
+  PASS no horizontal overflow       No horizontal overflow.
+  PASS console clean                No console errors.
+
+=== http://127.0.0.1:8080/ [mobile]
+  PASS page loads                   HTTP 200
+  PASS no horizontal overflow       No horizontal overflow.
+  PASS console clean                No console errors.
+
+=== http://127.0.0.1:8080/free-audit/ [desktop]
+  PASS page loads                   HTTP 200
+  PASS no horizontal overflow       No horizontal overflow.
+  PASS form#0 empty submit          Empty submit correctly refused.
+  PASS form#0 invalid input         Invalid data correctly refused.
+  PASS form#0 extreme length        Handled 5,000-character input without crashing.
+  PASS form#0 keyboard submit       Keyboard submit matched click-path behaviour.
+  PASS form#0 resubmission          Double-submit did not produce a duplicate POST.
+  PASS console clean                No console errors.
+
+=== http://127.0.0.1:8080/free-audit/ [mobile]
+  PASS page loads                   HTTP 200
+  PASS no horizontal overflow       No horizontal overflow.
+  PASS form#0 empty submit          Empty submit correctly refused.
+  PASS form#0 invalid input         Invalid data correctly refused.
+  PASS form#0 extreme length        Handled 5,000-character input without crashing.
+  PASS form#0 keyboard submit       Keyboard submit matched click-path behaviour.
+  PASS form#0 resubmission          Double-submit did not produce a duplicate POST.
+  PASS console clean                No console errors.
+
+=== http://127.0.0.1:8080/contact/ [desktop]
+  PASS page loads                   HTTP 200
+  PASS no horizontal overflow       No horizontal overflow.
+  PASS form#0 empty submit          Empty submit correctly refused.
+  PASS form#0 invalid input         Invalid data correctly refused.
+  PASS form#0 extreme length        Handled 5,000-character input without crashing.
+  PASS form#0 back-navigation       Field values survived back-navigation.
+  PASS form#0 keyboard submit       Keyboard submit matched click-path behaviour.
+  PASS form#0 resubmission          Double-submit did not produce a duplicate POST.
+  PASS console clean                No console errors.
+
+=== http://127.0.0.1:8080/contact/ [mobile]
+  PASS page loads                   HTTP 200
+  PASS no horizontal overflow       No horizontal overflow.
+  PASS form#0 empty submit          Empty submit correctly refused.
+  PASS form#0 invalid input         Invalid data correctly refused.
+  PASS form#0 extreme length        Handled 5,000-character input without crashing.
+  PASS form#0 back-navigation       Field values survived back-navigation.
+  PASS form#0 keyboard submit       Keyboard submit matched click-path behaviour.
+  PASS form#0 resubmission          Double-submit did not produce a duplicate POST.
+  PASS console clean                No console errors.
+
+FAIL 6  WARN 0  SKIP 2  PASS 40

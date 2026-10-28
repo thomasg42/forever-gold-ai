@@ -1,0 +1,30 @@
+shot home-top-1440.png
+shot home-gem-mid-1440.png
+gem facets lit at end 1440: 6
+shot home-gem-full-1440.png
+shot home-tuesday-1440.png
+shot home-calc-1440.png
+home overflow 1440: 0px
+home links 78, problems 1: 403 https://investor.thryv.com/news/news-details/2025/AI-Adoption-Among-Small-Businesses-Surges-41-in-2025-According-to-New-Survey-from-Thryv/
+shot system-receptionist-1440.png
+receptionist links 58, problems 0
+shot home-top-390.png
+shot home-gem-mid-390.png
+gem facets lit at end 390: 6
+shot home-gem-full-390.png
+shot home-tuesday-390.png
+shot home-calc-390.png
+home overflow 390: 0px
+shot system-receptionist-390.png
+shot numbers-1440.png
+shot numbers-390.png
+shot audit-empty-390.png
+shot audit-handoff-390.png
+handoff text: Last step: send it to Thomas
+404 status 404
+shot missing-390.png
+shot home-reduced-motion-1440.png
+reduced motion gem complete: true
+keyboard menu opened true, systems opened true, after Esc menu false systems false
+first tab target: Get my free systems audit
+back-navigation name: Kept Name
