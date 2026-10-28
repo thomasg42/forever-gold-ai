@@ -11,15 +11,16 @@ Coach David source: /Users/tg2.0/dev/coach-david-demo
 Repo: https://github.com/thomasg42/coach-david-demo
 
 git -C ~/dev/forever-gold-ai log --oneline -5
+5842fcf Refresh the paste-back report to the commit Pages built.
 7bd5fd1 Confirm the live preview commit in the build report.
 43ed1bb Record the preview build report for Lane 1 to verify.
 a5c7412 Link the live Coach David demo from the work page.
 7e77365 Publish the noindex Forever Gold AI preview.
 
 git -C ~/dev/forever-gold-ai status --short
-(empty)
+(empty at 5842fcf)
 
-The next commit after 7bd5fd1 changes only this file. git status --short is empty after it. docs/ is unchanged, so the curls in item 4 still identify the live pages.
+The commit that records this Pages result changes only this file and sits above 5842fcf. git status --short is empty after it. docs/ is unchanged.
 
 Coach David:
 git log --oneline -5
@@ -86,9 +87,9 @@ The four happy-path FAILs are required while leadEndpoint is empty. The form sho
 
 4. Live preview
 FGAI URL: https://thomasg42.github.io/forever-gold-ai/
-Pages: status built, commit 7bd5fd19ac38b07282e070aa331a5466011ab38d
-That commit matches git rev-parse HEAD at 14:34 MDT. docs/ last changed in a5c7412. 43ed1bb and 7bd5fd1 change only this report.
-Curl of / at 14:34 MDT:
+Pages: status built, commit 5842fcf3de86f80438897412960d63d4d590ff72
+docs/ last changed in a5c7412. Later commits change only this report.
+Curl of / at 14:36 MDT, after that build:
 h1 True
 noindex True
 css True (20261028-v1-b665c514)
@@ -264,7 +265,7 @@ Lighthouse was not run.
 site-qa was not repeated at 14:34. See item 3.
 FGA-Brain PR #13 is still open. This lane did not merge it, close it, or switch the vault branch.
 The vault was not committed. registry.json also contains earlier uncommitted edits from other work. Those were not reverted.
-GitHub Pages caches HTML for about 10 minutes. The curls above were against Pages commit 7bd5fd1.
+GitHub Pages caches HTML for about 10 minutes. The curls above were against Pages commit 5842fcf.
 
 13. Open questions for Thomas
 Say "launch" when the preview should be indexed and the domain should move. Until then it stays noindex.
