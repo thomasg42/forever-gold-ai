@@ -29,7 +29,7 @@ export const SITE = {
   url: 'https://thomasg42.github.io/forever-gold-ai',
   customDomain: null,
   launched: false,
-  leadEndpoint: '',
+  leadEndpoint: 'https://tggai.app.n8n.cloud/webhook/fgai-website-lead',
   bookingUrl: 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ3xvnaeAs43UTKKRuYL5yyKk6RuLX3h0M5D2bcwaaZA-kcI1yusbu_K1Ma-sMTZpktCR3QVDMaI',
   goldie: { widget: null },
   analytics: null,

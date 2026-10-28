@@ -172,6 +172,7 @@ export function bootForms(doc, config = {}, opts = {}) {
   const pagePath = opts.page != null ? opts.page : (view && view.location ? view.location.pathname : '');
 
   root.querySelectorAll('form[data-lead]').forEach((form) => {
+    if (endpoint) form.action = endpoint;
     applyPrefill(form, search);
     const alert = form.querySelector('[data-form-alert]');
     const handoff = form.querySelector('[data-handoff]');

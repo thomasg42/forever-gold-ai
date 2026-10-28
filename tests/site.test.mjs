@@ -182,7 +182,7 @@ test('seo, assets, links, and page weight', () => {
   }
   assert.match(read('robots.txt'), /Disallow: \//);
   assert.doesNotMatch(read('assets/config.js'), /calendly/i);
-  assert.match(read('assets/config.js'), /"leadEndpoint":""/);
+  assert.ok(read('assets/config.js').includes(`"leadEndpoint":${JSON.stringify(SITE.leadEndpoint)}`));
   const og = readFileSync(join(docs, 'assets/og.png'));
   assert.equal(og.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   assert.equal(og.readUInt32BE(16), 1200);

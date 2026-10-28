@@ -13,6 +13,7 @@ const assetHash = createHash('sha1');
 for (const name of readdirSync(assetSrc).filter((n) => /\.(css|js)$/.test(n)).sort()) {
   assetHash.update(name).update(readFileSync(join(assetSrc, name), 'utf8').replace(/\r\n/g, '\n'));
 }
+assetHash.update('\0leadEndpoint\0').update(String(SITE.leadEndpoint || ''));
 SITE.assetVersion = `${SITE.assetVersion}-${assetHash.digest('hex').slice(0, 8)}`;
 
 const dev = process.argv.includes('--dev');
