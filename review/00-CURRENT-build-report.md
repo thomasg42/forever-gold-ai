@@ -9,12 +9,13 @@ Branch: main, tracking origin/main
 Coach David: /Users/tg2.0/dev/coach-david-demo
 Repo: https://github.com/thomasg42/coach-david-demo
 
-git log --oneline -8 (forever-gold-ai, before this report file):
+git log --oneline -8 (forever-gold-ai):
+43ed1bb Record the preview build report for Lane 1 to verify.
 a5c7412 Link the live Coach David demo from the work page.
 7e77365 Publish the noindex Forever Gold AI preview.
 
-git status --short at that commit: empty.
-This report is committed after that. git status --short is empty after the report commit. git log --oneline -8 then starts with the report commit, then the two lines above.
+git status --short at 43ed1bb: empty.
+If a newer commit touches only this file, it inserts the 13:54 confirmation below and does not change docs/.
 
 Coach David git log --oneline -8:
 5b12aee Publish the noindex Coach David demo.
@@ -79,8 +80,9 @@ The four happy-path FAILs are required while leadEndpoint is empty. The form sho
 
 4. Live preview
 FGAI URL: https://thomasg42.github.io/forever-gold-ai/
-Pages: status built, commit a5c74127ad4901ec83faf1b4a60ebe7f5ff2e2cc
-Curl of / at 13:49 MDT:
+Pages: status built, commit 43ed1bb037f570e2d4981053cc74326c8de1eb87
+Docs content is a5c7412. 43ed1bb adds this report and does not change docs/.
+Curl of / at 13:54 MDT, after that build:
 h1 True
 noindex True
 css True (20261028-v1-b665c514)
@@ -93,8 +95,6 @@ daddy False
 robots.txt:
 User-agent: *
 Disallow: /
-
-The commit that adds this report does not change docs/. If Pages later reports that report commit, the HTML strings above are the ones to re-curl.
 
 Coach David URL: https://thomasg42.github.io/coach-david-demo/
 Pages: status built, commit 5b12aee0ab9615d44a2854683599db4117814250
