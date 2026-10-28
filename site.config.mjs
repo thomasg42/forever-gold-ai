@@ -300,7 +300,7 @@ export const SITE = {
     },
     {
       id: 'coach-david',
-      show: false,
+      show: true,
       group: 'demo',
       title: 'Coach David',
       label: 'Demo website',
