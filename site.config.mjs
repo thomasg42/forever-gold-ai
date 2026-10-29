@@ -28,7 +28,7 @@ export const SITE = {
   region: 'Bozeman, Montana',
   url: 'https://forevergoldai.com',
   customDomain: 'forevergoldai.com',
-  launched: false,
+  launched: true,
   leadEndpoint: 'https://tggai.app.n8n.cloud/webhook/fgai-website-lead',
   bookingUrl: 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ3xvnaeAs43UTKKRuYL5yyKk6RuLX3h0M5D2bcwaaZA-kcI1yusbu_K1Ma-sMTZpktCR3QVDMaI',
   goldie: { widget: { agentId: 'agent_5801m626gmhgf3b9xajs3dz9e48b' } },

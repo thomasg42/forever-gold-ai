@@ -146,7 +146,7 @@ test('seo, assets, links, and page weight', () => {
     assert.match(html, /rel="canonical"/);
     assert.match(html, /property="og:image"/);
     assert.match(html, /name="twitter:card" content="summary_large_image"/);
-    assert.match(html, /noindex, nofollow/);
+    assert.match(html, SITE.launched && !file.endsWith('404.html') ? /content="index, follow"/ : /noindex, nofollow/);
     assert.match(html, /rel="preload"/);
     assert.equal((html.match(/<h1\b/g) || []).length, 1, file);
     assert.match(html, /tel:\+14066986693/);
@@ -191,7 +191,13 @@ test('seo, assets, links, and page weight', () => {
       assert.equal(existsSync(join(docs, rel)), true, `${file} -> ${href}`);
     }
   }
-  assert.match(read('robots.txt'), /Disallow: \//);
+  if (SITE.launched) {
+    assert.match(read('robots.txt'), /Allow: \//);
+    assert.ok(read('robots.txt').includes(`Sitemap: ${SITE.url}/sitemap.xml`));
+    assert.match(read('404.html'), /noindex, nofollow/);
+  } else {
+    assert.match(read('robots.txt'), /Disallow: \//);
+  }
   assert.doesNotMatch(read('assets/config.js'), /calendly/i);
   assert.ok(read('assets/config.js').includes(`"leadEndpoint":${JSON.stringify(SITE.leadEndpoint)}`));
   const og = readFileSync(join(docs, 'assets/og.png'));

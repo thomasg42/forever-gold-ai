@@ -1,6 +1,6 @@
 # Forever Gold AI website
 
-Public noindex preview: https://forevergoldai.com/ (GitHub Pages custom domain since 2026-10-28; the github.io URL redirects)
+Live site: https://forevergoldai.com/ (GitHub Pages custom domain, launched and indexable since 2026-10-28; the github.io URL redirects)
 
 Source of truth for words, phone, stats, and offers: the vault file `FGA-AIOS/forever-gold-agency/forever-gold-ai/context/product-facts.md`. Do not invent a claim, a price, a client name, or a result number.
 
@@ -23,7 +23,7 @@ The first noindex preview was authorized by the 2026-10-28 build prompt. That au
 
 ## Do not
 
-- Set `launched` to true until Thomas says "launch". forevergoldai.com is connected (docs/CNAME); do not remove it.
+- Set `launched` back to false, or remove docs/CNAME. Thomas said "launch" on 2026-10-28; the site is indexed on forevergoldai.com.
 - Add a third-party script or an analytics tag. The only allowed one is the pinned ElevenLabs Goldie widget on /systems/ai-receptionist/.
 - Name a hidden client, print Calendly, or claim 24/7.
 - Commit secrets. This repo is public.

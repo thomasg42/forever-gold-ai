@@ -368,5 +368,5 @@ export const PAGES = [
   { slug: 'faq', title: 'Questions Owners Ask | Forever Gold AI', description: DESCRIPTIONS.faq, body: faqPage, schema: (ctx) => [faqSchema(FAQS), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'faq', name: 'FAQ' }])] },
   { slug: 'privacy', title: 'Privacy Policy | Forever Gold AI', description: DESCRIPTIONS.privacy, body: privacyPage, schema: (ctx) => [breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'privacy', name: 'Privacy' }])] },
   { slug: 'sms-terms', title: 'Text Message Terms | Forever Gold AI', description: DESCRIPTIONS.sms, body: smsPage, schema: (ctx) => [breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'sms-terms', name: 'SMS Terms' }])] },
-  { slug: '', file: '404.html', linkSlug: '', depth: 0, inSitemap: false, title: 'Page Not Found | Forever Gold AI', description: DESCRIPTIONS.missing, body: missing, schema: () => [] },
+  { slug: '', file: '404.html', linkSlug: '', depth: 0, inSitemap: false, noindex: true, title: 'Page Not Found | Forever Gold AI', description: DESCRIPTIONS.missing, body: missing, schema: () => [] },
 ];
