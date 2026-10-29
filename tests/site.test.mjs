@@ -70,7 +70,8 @@ function allowedExternal(decoded) {
   if (allow.has(decoded)) return true;
   const u = new URL(decoded);
   const site = new URL(SITE.url);
-  return u.origin === site.origin && (u.pathname === site.pathname || u.pathname.startsWith(`${site.pathname}/`));
+  const prefix = site.pathname.replace(/\/$/, '');
+  return u.origin === site.origin && (u.pathname === site.pathname || u.pathname.startsWith(`${prefix}/`));
 }
 function bodyText(html) {
   const { document } = parseHTML(html);
