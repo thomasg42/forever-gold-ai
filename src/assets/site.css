@@ -183,6 +183,7 @@ form[data-lead] .btn-ghost { color: var(--ink); border-color: var(--gold-800); }
 .tap-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--black-900); border-top: 1px solid var(--gold-600); }
 .tap-bar a { color: var(--ivory); text-decoration: none; display: grid; place-items: center; min-height: var(--tap); }
 .tap-bar a:last-child { background: var(--gold-500); color: var(--black-950); font-weight: 600; }
+elevenlabs-convai { bottom: var(--tap) !important; }
 .crumbs ol { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 16px 0 0; margin: 0; color: var(--silver-400); }
 .crumbs a { color: var(--silver-200); }
 .page-intro { padding-top: 18px; }

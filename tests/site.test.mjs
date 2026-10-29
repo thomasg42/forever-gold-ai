@@ -161,14 +161,24 @@ test('seo, assets, links, and page weight', () => {
       assert.ok(Number(img.getAttribute('width')) > 0, file);
       assert.ok(Number(img.getAttribute('height')) > 0, file);
     }
+    const pageRel = relPosix(docs, file);
+    const goldieScript = 'https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js';
     for (const script of document.querySelectorAll('script[src]')) {
-      assert.doesNotMatch(script.getAttribute('src'), /^https?:/i);
+      const src = script.getAttribute('src');
+      if (/^https?:/i.test(src)) {
+        assert.equal(pageRel, 'systems/ai-receptionist/index.html', file);
+        assert.equal(src, goldieScript);
+      }
     }
     const dir = dirname(file);
     for (const href of [...html.matchAll(/(?:href|src)="([^"]+)"/g)].map((m) => m[1])) {
       if (/^(tel:|sms:|mailto:|#|data:)/.test(href)) continue;
       const decoded = href.replace(/&amp;/g, '&');
       if (/^https?:/.test(decoded)) {
+        if (decoded === 'https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js') {
+          assert.equal(relPosix(docs, file), 'systems/ai-receptionist/index.html', file);
+          continue;
+        }
         assert.equal(allowedExternal(decoded), true, decoded);
         continue;
       }
@@ -285,6 +295,11 @@ test('system pages, work, stripe, and goldie', () => {
       assert.ok(slot);
       assert.equal(copy.contains(slot), false);
       assert.match(slot.textContent, /Talk to Goldie/);
+      assert.match(slot.textContent, /Tap to talk to Goldie, an AI receptionist built by Forever Gold AI\. She can book a free call with Thomas\./);
+      assert.equal(slot.querySelector('elevenlabs-convai').getAttribute('agent-id'), SITE.goldie.widget.agentId);
+      assert.equal(slot.querySelector('script').getAttribute('src'), 'https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js');
+      assert.match(slot.textContent, /Call \(406\) 698-6693/);
+      assert.match(slot.textContent, /Text Thomas/);
     } else {
       assert.equal(slot, null, system.id);
     }
@@ -292,6 +307,19 @@ test('system pages, work, stripe, and goldie', () => {
     const raw = read(rel);
     if (system.id === 'job-to-invoice') assert.match(raw, /Stripe/);
     else assert.doesNotMatch(raw, /Stripe/);
+  }
+  for (const file of htmlFiles()) {
+    const rel = relPosix(docs, file);
+    const html = readFileSync(file, 'utf8');
+    const externalScripts = [...html.matchAll(/<script[^>]*\ssrc="(https?:[^"]+)"/gi)].map((m) => m[1]);
+    if (rel === 'systems/ai-receptionist/index.html') {
+      assert.deepEqual(externalScripts, ['https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js']);
+      assert.equal((html.match(/<elevenlabs-convai\b/g) || []).length, 1);
+    } else {
+      assert.deepEqual(externalScripts, [], rel);
+      assert.equal(html.includes('elevenlabs-convai'), false, rel);
+      assert.equal(html.includes('agent_5801m626gmhgf3b9xajs3dz9e48b'), false, rel);
+    }
   }
   for (let i = 0; i < copies.length; i += 1) {
     for (let j = i + 1; j < copies.length; j += 1) {

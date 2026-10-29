@@ -47,9 +47,16 @@ function pageHead(kicker, h1, lead) {
 }
 
 function goldie(ctx) {
+  const widget = ctx.SITE.goldie && ctx.SITE.goldie.widget;
+  const agentId = widget && widget.agentId;
+  const talk = agentId
+    ? `<p>Tap to talk to Goldie, an AI receptionist built by Forever Gold AI. She can book a free call with Thomas.</p>
+  <elevenlabs-convai agent-id="${esc(agentId)}"></elevenlabs-convai>
+  <script src="https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js" async type="text/javascript"></script>`
+    : '<p>Goldie, our own AI receptionist, is coming to this page.</p>';
   return `<section id="talk-to-goldie" data-goldie-slot>
   <h2>Talk to Goldie</h2>
-  <p>Goldie, our own AI receptionist, is coming to this page.</p>
+  ${talk}
   <div class="btn-row">
     <a class="btn btn-gold" href="${ctx.tel}">Call ${esc(ctx.SITE.phone.display)}</a>
     <a class="btn btn-ghost" href="${ctx.sms}">Text Thomas</a>
