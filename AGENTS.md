@@ -24,6 +24,6 @@ The first noindex preview was authorized by the 2026-10-28 build prompt. That au
 ## Do not
 
 - Set `launched` back to false, or remove docs/CNAME. Thomas said "launch" on 2026-10-28; the site is indexed on forevergoldai.com.
-- Add a third-party script or an analytics tag. The only allowed one is the pinned ElevenLabs Goldie widget on /systems/ai-receptionist/.
+- Add a third-party script or an analytics tag. The only allowed ones are the pinned ElevenLabs Goldie widget on /systems/ai-receptionist/ and the Meta Pixel (`SITE.analytics.metaPixelId`, added 2026-11-02 so Meta ads can measure leads; disclosed on /privacy/). The pixel never receives form answers.
 - Name a hidden client, print Calendly, or claim 24/7.
 - Commit secrets. This repo is public.

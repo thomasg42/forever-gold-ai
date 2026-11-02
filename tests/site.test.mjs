@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { PAIRS, SITE, liveStats, shownWork } from '../site.config.mjs';
 import { hoursBack, missedCallLeak } from '../src/assets/calc.js';
 import { facetState } from '../src/assets/site.js';
-import { applyPrefill, bootForms, smsText } from '../src/assets/forms.js';
+import { applyPrefill, bootForms, captureSource, smsText, track } from '../src/assets/forms.js';
 import { bootCalcs } from '../src/assets/site.js';
 import { loadLinkedom } from '../tools/dev-deps.mjs';
 
@@ -325,6 +325,17 @@ test('system pages, work, stripe, and goldie', () => {
     } else {
       assert.deepEqual(externalScripts, [], rel);
       assert.equal(html.includes('elevenlabs-convai'), false, rel);
+    }
+    const loaders = html.match(/https:\/\/connect\.facebook\.net\/[^'"]+/g) || [];
+    if (SITE.analytics && SITE.analytics.metaPixelId) {
+      assert.deepEqual(loaders, ['https://connect.facebook.net/en_US/fbevents.js'], rel);
+      assert.ok(html.includes(`fbq('init','${SITE.analytics.metaPixelId}')`), rel);
+      assert.ok(html.includes(`fbq('set','autoConfig',false,'${SITE.analytics.metaPixelId}')`), rel);
+      assert.equal((html.match(/fbq\('track','PageView'\)/g) || []).length, 1, rel);
+    } else {
+      assert.deepEqual(loaders, [], rel);
+    }
+    if (rel !== 'systems/ai-receptionist/index.html') {
       assert.equal(html.includes('agent_5801m626gmhgf3b9xajs3dz9e48b'), false, rel);
     }
   }
@@ -478,4 +489,38 @@ test('forms fall back to a prefilled text and never fake a send', async () => {
   assert.equal(okForm.querySelector('[data-thanks]').hidden, false);
   assert.match(okForm.querySelector('[data-thanks]').textContent, /Sent to Thomas/);
   assert.equal(okForm.dataset.sent, '1');
+});
+
+test('ad source rides along with the lead and the pixel only hears Lead', async () => {
+  const store = new Map();
+  const fakeStore = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, v) };
+  const first = captureSource('?utm_source=meta&utm_medium=paid&utm_campaign=fgai-free-audit&fbclid=abc', fakeStore, '/free-audit/');
+  assert.deepEqual(first, { utm_source: 'meta', utm_medium: 'paid', utm_campaign: 'fgai-free-audit', fbclid: 'abc', landing: '/free-audit/' });
+  assert.deepEqual(captureSource('', fakeStore, '/contact/'), first);
+  assert.deepEqual(captureSource('', null, '/'), {});
+  const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+  assert.deepEqual(captureSource('', broken, '/'), {});
+  assert.equal(captureSource('?utm_source=meta', broken, '/').utm_source, 'meta');
+  track(null, 'Lead');
+  track({ fbq: () => { throw new Error('blocked'); } }, 'Lead');
+
+  const okDoc = doc('free-audit/index.html');
+  const okForm = okDoc.querySelector('form[data-lead]');
+  const calls = [];
+  okDoc.defaultView.fbq = (...args) => calls.push(args);
+  let posted = null;
+  bootForms(okDoc, { leadEndpoint: 'https://example.test/lead', phoneE164: '+14066986693' }, {
+    search: '?utm_source=meta&utm_campaign=fgai-free-audit',
+    page: '/free-audit/',
+    store: null,
+    fetch: async (url, init) => { posted = JSON.parse(init.body); return { ok: true, json: async () => ({ ok: true }) }; },
+  });
+  fillLead(okForm);
+  submitForm(okForm);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(posted.source.utm_source, 'meta');
+  assert.equal(posted.source.utm_campaign, 'fgai-free-audit');
+  assert.equal(posted.source.landing, '/free-audit/');
+  assert.deepEqual(calls, [['track', 'Lead', { content_name: posted.form }]]);
+  assert.equal(JSON.stringify(calls).includes('Ada'), false);
 });

@@ -158,6 +158,40 @@ export function applyPrefill(form, search) {
   if (hours && params.get('hours')) hours.value = params.get('hours');
 }
 
+const SOURCE_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'fbclid'];
+
+// Remember which ad brought this visit (first tagged landing wins for the session) so the lead email can say.
+export function captureSource(search, store, landing) {
+  const params = new URLSearchParams(String(search || '').replace(/^\?/, ''));
+  const fresh = {};
+  for (const key of SOURCE_KEYS) {
+    const value = params.get(key);
+    if (value) fresh[key] = value.slice(0, key === 'fbclid' ? 300 : 80);
+  }
+  if (Object.keys(fresh).length) {
+    const next = { ...fresh, landing: String(landing || '').slice(0, 300) };
+    try { if (store) store.setItem('fgai_source', JSON.stringify(next)); } catch { /* storage blocked */ }
+    return next;
+  }
+  try {
+    const saved = JSON.parse((store && store.getItem('fgai_source')) || 'null');
+    return saved && typeof saved === 'object' ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+// Meta Pixel event, only if the pixel loaded. Never sends form answers.
+export function track(view, event, params) {
+  try {
+    if (view && typeof view.fbq === 'function') view.fbq('track', event, params || {});
+  } catch { /* pixel blocked */ }
+}
+
+function sessionStore(view) {
+  try { return view && view.sessionStorage ? view.sessionStorage : null; } catch { return null; }
+}
+
 function show(el, on) {
   if (el) el.hidden = !on;
 }
@@ -170,6 +204,14 @@ export function bootForms(doc, config = {}, opts = {}) {
   const view = root.defaultView || (typeof window !== 'undefined' ? window : null);
   const search = opts.search != null ? opts.search : (view && view.location ? view.location.search : '');
   const pagePath = opts.page != null ? opts.page : (view && view.location ? view.location.pathname : '');
+  const source = captureSource(search, opts.store !== undefined ? opts.store : sessionStore(view), pagePath);
+
+  root.querySelectorAll('a[href^="https://calendar.google.com/"]').forEach((link) => {
+    link.addEventListener('click', () => track(view, 'Schedule'));
+  });
+  root.querySelectorAll('a[href^="tel:"], a[href^="sms:"]').forEach((link) => {
+    link.addEventListener('click', () => track(view, 'Contact'));
+  });
 
   root.querySelectorAll('form[data-lead]').forEach((form) => {
     if (endpoint) form.action = endpoint;
@@ -212,6 +254,7 @@ export function bootForms(doc, config = {}, opts = {}) {
       const payload = readForm(form);
       payload.page = pagePath;
       payload.submittedAt = new Date().toISOString();
+      payload.source = source;
       const text = smsText(payload);
       if (sms) sms.setAttribute('href', smsHref(phone, text));
 
@@ -233,6 +276,7 @@ export function bootForms(doc, config = {}, opts = {}) {
           show(thanks, true);
           show(handoff, false);
           form.dataset.sent = '1';
+          track(view, 'Lead', { content_name: payload.form });
         } else {
           show(error, true);
           show(handoff, true);

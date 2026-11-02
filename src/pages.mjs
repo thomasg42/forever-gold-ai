@@ -275,6 +275,8 @@ ${pageHead('Privacy', 'Privacy', 'What the forms collect, why we ask, and how te
   <h2>Text messages</h2>
   <p>If you check the box, Forever Gold AI may text you about that request. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out. Reply HELP for help.</p>
   <p>We do not sell or share your mobile number or text-message consent with third parties or affiliates for marketing.</p>
+  <h2>Ads and measurement</h2>
+  <p>This site uses the Meta Pixel so we can see which Facebook and Instagram ads bring visitors and requests. It records page visits, and whether a form was sent or a call, text, or booking link was tapped. We do not add your form answers to what it sends. Meta may set cookies under its own data policy. You can limit ad tracking in your Facebook and Instagram ad settings or block cookies in your browser.</p>
   <h2>How to reach Thomas</h2>
   <p>Call or text <a href="${ctx.tel}">${esc(ctx.SITE.phone.display)}</a>. You can also use the contact form on this site.</p>
   <p><a href="${ctx.link('sms-terms')}">SMS terms</a></p>

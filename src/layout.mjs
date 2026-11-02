@@ -38,6 +38,15 @@ function ld(schema) {
     `<script type="application/ld+json">${JSON.stringify(obj).replace(/</g, '\\u003c')}</script>`).join('\n');
 }
 
+function metaPixel(ctx) {
+  const id = ctx.SITE.analytics && ctx.SITE.analytics.metaPixelId;
+  if (!id || ctx.dev || !/^\d+$/.test(id)) return '';
+  return `<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('set','autoConfig',false,'${id}');fbq('init','${id}');fbq('track','PageView');
+</script>`;
+}
+
 function head(ctx, page, schema) {
   const { SITE } = ctx;
   const url = page.file === '404.html' ? ctx.abs('404.html') : ctx.abs(page.slug ? `${page.slug}/` : '');
@@ -71,6 +80,7 @@ function head(ctx, page, schema) {
 <meta name="twitter:description" content="${esc(page.description)}">
 <meta name="twitter:image" content="${og}">
 ${ld(schema)}
+${metaPixel(ctx)}
 <script>
 (function(){
   document.documentElement.classList.add('js');
