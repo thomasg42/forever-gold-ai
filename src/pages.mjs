@@ -232,11 +232,30 @@ ${ctaBand(ctx, { title: 'Talk with Thomas.', href: ctx.link('free-audit'), lead:
 }
 
 function auditPage(ctx) {
-  return `${crumbs(ctx, [{ path: '', name: 'Home' }, { path: 'free-audit', name: 'Free audit' }])}
-${pageHead('Free audit', 'Free systems audit. Free 15-minute call.', 'We look at how calls, leads, scheduling, quotes and invoices move through your business, then show you the first three systems worth building.')}
+  return `${crumbs(ctx, [{ path: '', name: 'Home' }, { path: 'free-audit', name: 'Free AI consultant audit' }])}
+${pageHead('Free AI consultant audit', 'Sit down with an AI consultant. Free.', 'AI changes every month. A free audit with AI consultant Thomas Gutierrez shows you what is out there right now and where it fits your business.')}
+<section class="section section-ivory"><div class="wrap">
+  <div class="reveal">
+    <p class="kicker">Why owners ask for it</p>
+    <h2>You keep hearing AI can run half your office. Nobody has shown you which half.</h2>
+    <p>Thomas is an AI consultant based in Bozeman, Montana. He builds AI operations and AI systems, and he runs his own business on them.</p>
+  </div>
+  <div class="reveal">
+    <h2>What the AI consultant looks at</h2>
+    <ol class="flow">
+      <li><span>How calls, leads, scheduling, quotes and invoices move through your business today.</span></li>
+      <li><span>What AI tools can do for a business like yours right now.</span></li>
+      <li><span>The first three systems worth building.</span></li>
+    </ol>
+  </div>
+</div></section>
 <section class="section"><div class="wrap form-layout">
-  ${auditForm(ctx)}
+  <div>
+    <h2 class="reveal">Request your free AI consultant audit</h2>
+    ${auditForm(ctx)}
+  </div>
   <aside class="form-aside">
+    <p>Rather talk to the AI consultant now?</p>
     <p><a class="btn btn-ghost" href="${ctx.tel}">Call ${esc(ctx.SITE.phone.display)}</a></p>
     <p><a class="btn btn-ghost" href="${ctx.sms}">Text Thomas</a></p>
     <p>${bookLink(ctx)}</p>
@@ -335,7 +354,7 @@ const DESCRIPTIONS = {
   gold: 'How Forever Gold AI takes mistakes out: type a fact once, check before acting, flag every failure, and keep a person where it matters.',
   work: 'See Gold Mobile Mechanic and the tools Forever Gold AI runs, including GoldSign, Crew Start, and Document Processing.',
   about: 'Thomas Gutierrez, founder of Forever Gold AI in Bozeman, Montana. Seven years as a restaurant general manager, now building AI systems for owners.',
-  audit: 'Request a free systems audit or a free 15-minute call. We look at calls, leads, scheduling, quotes, and invoices, then name the first systems.',
+  audit: 'Free audit with an AI consultant. Thomas looks at your calls, leads, scheduling, quotes, and invoices, shows what AI can do now, and names the first systems.',
   contact: 'Call or text Thomas at (406) 698-6693, book a free 15-minute call, or send a short note. Forever Gold AI is based in Bozeman, Montana.',
   faq: 'Straight answers on tech skill, breakdowns, later changes, voice, staff, cost, timing, working outside Montana, and the tools we use.',
   privacy: 'What Forever Gold AI forms collect and why, how text messages work, STOP and HELP, and the rule that your number is not sold for marketing.',
@@ -365,7 +384,7 @@ export const PAGES = [
   { slug: 'gold-standard', title: 'How Failures Get Caught | Forever Gold AI', description: DESCRIPTIONS.gold, body: goldPage, schema: (ctx) => [breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'gold-standard', name: 'Gold Standard' }])] },
   { slug: 'work', title: 'See the Systems Working | Forever Gold AI', description: DESCRIPTIONS.work, body: workPage, schema: (ctx) => [breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'work', name: 'Work' }])] },
   { slug: 'about', title: 'Thomas Gutierrez, Founder | Forever Gold AI', description: DESCRIPTIONS.about, body: aboutPage, schema: (ctx) => [aboutSchema(), businessSchema(ctx), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'about', name: 'About' }])] },
-  { slug: 'free-audit', title: 'Free Systems Audit | Forever Gold AI', description: DESCRIPTIONS.audit, body: auditPage, schema: (ctx) => [contactSchema('Free audit'), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'free-audit', name: 'Free audit' }])] },
+  { slug: 'free-audit', title: 'Free AI Consultant Audit | Forever Gold AI', description: DESCRIPTIONS.audit, body: auditPage, schema: (ctx) => [contactSchema('Free AI consultant audit'), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'free-audit', name: 'Free AI consultant audit' }])] },
   { slug: 'contact', title: 'Call or Text Thomas | Forever Gold AI', description: DESCRIPTIONS.contact, body: contactPage, schema: (ctx) => [contactSchema('Contact'), businessSchema(ctx), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'contact', name: 'Contact' }])] },
   { slug: 'faq', title: 'Questions Owners Ask | Forever Gold AI', description: DESCRIPTIONS.faq, body: faqPage, schema: (ctx) => [faqSchema(FAQS), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'faq', name: 'FAQ' }])] },
   { slug: 'privacy', title: 'Privacy Policy | Forever Gold AI', description: DESCRIPTIONS.privacy, body: privacyPage, schema: (ctx) => [breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'privacy', name: 'Privacy' }])] },

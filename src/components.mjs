@@ -217,8 +217,8 @@ export function auditForm(ctx) {
   return `<form data-lead data-form="audit" method="post" action="">
   <fieldset class="choices">
     <legend>What do you want?</legend>
-    <label class="choice"><input type="radio" name="type" value="audit" checked> <span>Free systems audit</span></label>
-    <label class="choice"><input type="radio" name="type" value="call"> <span>Free 15-minute call</span></label>
+    <label class="choice"><input type="radio" name="type" value="audit" checked> <span>Free AI consultant audit</span></label>
+    <label class="choice"><input type="radio" name="type" value="call"> <span>Free 15-minute call with the AI consultant</span></label>
     ${bookLink(ctx)}
   </fieldset>
   <label>Name <input name="name" autocomplete="name" required></label>
@@ -243,7 +243,7 @@ export function auditForm(ctx) {
   <input type="hidden" name="hoursYearly" value="">
   ${consent(ctx)}
   ${trap()}
-  <button class="btn btn-gold" type="submit">Send my request</button>
+  <button class="btn btn-gold" type="submit">Get my free AI consultant audit</button>
   ${resultBlock(ctx)}
 </form>`;
 }
