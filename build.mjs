@@ -40,6 +40,8 @@ function copyDir(from, to) {
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 copyDir(assetSrc, join(OUT, 'assets'));
+// Forever Gold CRM: static client portal, copied as is. It never goes through the page template, so it gets no pixel.
+copyDir(join(here, 'src/crm'), join(OUT, 'crm'));
 
 const browserConfig = {
   dev,

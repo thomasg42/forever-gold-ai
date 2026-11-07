@@ -43,7 +43,8 @@ function grams(text) {
   return out;
 }
 function htmlFiles() {
-  return walk(docs).filter((f) => f.endsWith('.html'));
+  // The client portal is private and noindex on purpose, so the public page rules skip it. It has its own test below.
+  return walk(docs).filter((f) => f.endsWith('.html') && !relPosix(docs, f).startsWith('crm/'));
 }
 function lum(hex) {
   const n = hex.replace('#', '');
@@ -523,4 +524,16 @@ test('ad source rides along with the lead and the pixel only hears Lead', async 
   assert.equal(posted.source.landing, '/free-audit/');
   assert.deepEqual(calls, [['track', 'Lead', { content_name: posted.form }]]);
   assert.equal(JSON.stringify(calls).includes('Ada'), false);
+});
+
+test('client portal stays private, tracker free, and names nobody', () => {
+  const html = readFileSync(join(docs, 'crm/index.html'), 'utf8');
+  assert.match(html, /name="robots" content="noindex, nofollow"/);
+  assert.match(html, /Content-Security-Policy/);
+  assert.match(html, /href="tel:\+14066986693"/);
+  assert.doesNotMatch(html, /fbq|facebook\.net|googletagmanager|gtag|elevenlabs/i);
+  const sitemap = readFileSync(join(docs, 'sitemap.xml'), 'utf8');
+  assert.doesNotMatch(sitemap, /\/crm/);
+  const home = readFileSync(join(docs, 'index.html'), 'utf8');
+  assert.match(home, /href="[^"]*crm\/?"[^>]*>Client login</);
 });

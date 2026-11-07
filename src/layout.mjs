@@ -145,6 +145,7 @@ function footer(ctx) {
     ['faq', 'FAQ'],
     ['privacy', 'Privacy'],
     ['sms-terms', 'SMS Terms'],
+    ['crm', 'Client login'],
   ].map(([path, label]) => `<li><a href="${ctx.link(path)}">${label}</a></li>`).join('');
   const socials = SITE.socials.map((item) =>
     `<li><a href="${esc(item.url)}" target="_blank" rel="noopener">${icon(item.network)}<span>${esc(item.name)}</span></a></li>`).join('');
