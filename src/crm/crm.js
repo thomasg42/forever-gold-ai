@@ -2,7 +2,7 @@
 // This file is public, so it holds no client names and no customer data. Everything comes from the Worker
 // after sign-in. All sheet text is untrusted (it comes from callers and forms), so it is only ever
 // placed with text nodes, never as HTML.
-import { MONEY_FIELDS, NOTES_MAX, STATUS_OPTIONS, digitsOnly, needsFollowUp, summarize } from './shared/leads.js';
+import { HAND_SOURCES, MONEY_FIELDS, NOTES_MAX, STATUS_OPTIONS, adIdFromSource, digitsOnly, needsFollowUp, summarize } from './shared/leads.js';
 
 const API_BASE = 'https://forever-gold-crm.forevergoldai.workers.dev';
 const SESSION_KEY = 'fg_crm_session';
@@ -48,6 +48,8 @@ const liveApi = {
   leads: (business, token) => call(`/api/leads?business=${encodeURIComponent(business)}`, { token }),
   overview: (token) => call('/api/overview', { token }),
   update: (payload, token) => call('/api/leads/update', { method: 'POST', body: payload, token }),
+  add: (payload, token) => call('/api/leads/add', { method: 'POST', body: payload, token }),
+  ads: (business, range, token) => call(`/api/ads?business=${encodeURIComponent(business)}&range=${encodeURIComponent(range)}`, { token }),
 };
 const api = () => window.CRM_API || liveApi;
 
@@ -58,6 +60,8 @@ const state = {
   cache: {},
   drafts: {},
   filter: { view: 'follow', source: 'all', q: '', showTests: false },
+  adsRange: 'launch',
+  adNames: {},
 };
 
 // Sessions: the token only, never customer data. A browser may refuse storage, so every touch is guarded.
@@ -317,6 +321,7 @@ function statsBlock(summary) {
     h('dl', { class: 'stats', 'aria-label': 'Where your leads stand' },
       summary.stages.map((stage) => statBox(stage.label, stage.count, notRecorded(stage.notRecorded)))),
     h('dl', { class: 'stats money', 'aria-label': 'Money recorded' },
+      statBox('Potential money', money(summary.potential), summary.potential.recorded ? `on ${summary.potential.recorded} open lead${summary.potential.recorded === 1 ? '' : 's'}` : 'Add an amount on a lead'),
       statBox('Money collected', money(summary.collected), moneyNote(summary.collected)),
       statBox('Job costs', money(summary.directCosts), moneyNote(summary.directCosts)),
       statBox('Other costs', money(summary.otherCosts), moneyNote(summary.otherCosts))),
@@ -360,7 +365,7 @@ function leadCard(slug, lead, labels) {
     h('a', { class: 'lead-main', href: `#/b/${encodeURIComponent(slug)}/lead/${encodeURIComponent(lead.key)}` },
       h('span', { class: 'lead-name' }, name),
       h('span', { class: 'lead-meta' }, fmtWhen(lead.receivedAt)),
-      h('span', { class: 'lead-meta' }, [lead.project && `${labels.project || 'Project'}: ${lead.project}`, SOURCE_LABEL[lead.sourceKind]].filter(Boolean).join(' · ')),
+      h('span', { class: 'lead-meta' }, [lead.project && `${labels.project || 'Project'}: ${lead.project}`, state.adNames[adIdFromSource(lead.source)] ? `Ad: ${state.adNames[adIdFromSource(lead.source)]}` : SOURCE_LABEL[lead.sourceKind]].filter(Boolean).join(' · ')),
       h('span', { class: 'pills' }, pills)),
     tel && h('a', { class: 'lead-call', href: tel, 'aria-label': `Call ${name} at ${fmtPhone(lead.phone)}` }, 'Call'));
 }
@@ -376,6 +381,89 @@ function renderList(container, slug, data) {
     ? 'Nothing matches this view. Try All.'
     : 'No inquiries on your records yet. New ones show up here when you refresh.';
   container.replaceChildren(h('p', { class: 'empty' }, words));
+}
+
+// ---------- Ad numbers ----------
+const AD_RANGES = [['launch', 'Since launch'], ['7d', 'Last 7 days'], ['today', 'Today']];
+const count = (value) => new Intl.NumberFormat('en-US').format(value);
+const moneyOr = (value, fallback) => (value === null || value === undefined ? fallback : fmtMoney(value));
+
+function adCard(ad) {
+  return h('li', { class: 'ad-card' },
+    h('h3', {}, ad.name),
+    h('dl', { class: 'ad-facts' },
+      h('div', {}, h('dt', {}, 'Spent'), h('dd', {}, fmtMoney(ad.spend))),
+      h('div', {}, h('dt', {}, 'Link clicks'), h('dd', {}, count(ad.linkClicks))),
+      h('div', {}, h('dt', {}, 'Page views'), h('dd', {}, count(ad.landingPageViews))),
+      h('div', {}, h('dt', {}, 'Inquiries'), h('dd', {}, count(ad.forms))),
+      h('div', {}, h('dt', {}, 'Booked'), h('dd', {}, ad.booked === null ? 'Unknown' : count(ad.booked))),
+      h('div', {}, h('dt', {}, 'Paid'), h('dd', {}, ad.paid === null ? 'Unknown' : count(ad.paid))),
+      h('div', {}, h('dt', {}, 'Potential'), h('dd', {}, moneyOr(ad.potential, 'Unknown'))),
+      h('div', {}, h('dt', {}, 'Collected'), h('dd', {}, moneyOr(ad.collected, 'Unknown')))));
+}
+
+function adsBoard(board) {
+  const { totals, forms, funnel, costs } = board;
+  const fromYourRecords = funnel.notRecorded ? `${funnel.notRecorded} not recorded` : null;
+  return [
+    h('h3', { class: 'board-title' }, 'From Meta'),
+    h('dl', { class: 'stats' },
+      statBox('Ad spend', fmtMoney(totals.spend)),
+      statBox('Times shown', count(totals.impressions)),
+      statBox('Reach', count(totals.reach)),
+      statBox('Link clicks', count(totals.linkClicks), moneyOr(costs.perLinkClick, null) && `${fmtMoney(costs.perLinkClick)} per click`),
+      statBox('Page views', count(totals.landingPageViews)),
+      statBox('Call button taps', count(totals.callTaps), 'A tap, not a finished call')),
+    h('h3', { class: 'board-title' }, 'From your records'),
+    h('dl', { class: 'stats' },
+      statBox('Inquiries', count(forms.total), `${count(forms.fromAds)} from ads, ${count(forms.otherSource)} other${forms.addedByHand ? `, ${count(forms.addedByHand)} added by hand` : ''}`),
+      statBox('Cost per ad inquiry', moneyOr(costs.perForm, 'None yet')),
+      statBox('Booked from ads', funnel.booked === null ? null : count(funnel.booked), fromYourRecords),
+      statBox('Paying from ads', funnel.paid === null ? null : count(funnel.paid), fromYourRecords),
+      statBox('Cost per paying customer', costs.perPaidCustomer === null ? null : fmtMoney(costs.perPaidCustomer)),
+      statBox('Potential money from ads', moneyOr(board.potential, null)),
+      statBox('Collected from ads', moneyOr(board.collected, null), board.backPerDollar === null ? null : `${fmtMoney(board.backPerDollar)} back per $1 of ads`)),
+    board.formsWithoutAdId > 0 && h('p', { class: 'note' }, `${board.formsWithoutAdId} came from an ad but do not say which one, so they are not in the ad by ad list.`),
+    board.ads.length > 0 && h('h3', { class: 'board-title' }, 'Ad by ad'),
+    board.ads.length > 0 && h('ul', { class: 'ad-list' }, board.ads.map(adCard)),
+    h('p', { class: 'note' }, 'Spend and clicks come from Meta and can lag by a few minutes. Paying customers only count once someone marks the payment on a lead.'),
+  ];
+}
+
+function adsPanel(slug, token, onNames) {
+  const body = h('div', { 'aria-live': 'polite' });
+  const panel = h('section', { class: 'ads-panel', 'aria-labelledby': 'ads-title' }, h('h2', { id: 'ads-title' }, 'Your ads'));
+  const chips = h('div', { class: 'filters', role: 'group', 'aria-label': 'Which dates to show' });
+  const load = async () => {
+    chips.replaceChildren(...AD_RANGES.map(([id, label]) => h('button', {
+      class: 'chip',
+      type: 'button',
+      'aria-pressed': String(state.adsRange === id),
+      onClick: () => {
+        state.adsRange = id;
+        load();
+      },
+    }, label)));
+    body.replaceChildren(h('p', { class: 'note' }, 'Loading your ad numbers...'));
+    const asked = state.adsRange;
+    try {
+      const board = await api().ads(slug, asked, token);
+      if (asked !== state.adsRange) return;
+      if (!board.connected) {
+        panel.replaceChildren(panel.firstChild, h('p', { class: 'note' }, 'Ad numbers are not connected yet. This does not mean your ads have no results.'));
+        return;
+      }
+      for (const ad of board.ads) state.adNames[ad.adId] = ad.name;
+      onNames();
+      body.replaceChildren(...adsBoard(board).filter(Boolean));
+    } catch (error) {
+      if (asked !== state.adsRange) return;
+      body.replaceChildren(h('p', { class: 'message', role: 'alert' }, error.message));
+    }
+  };
+  panel.append(chips, body);
+  load();
+  return panel;
 }
 
 function dashboardView(slug, data) {
@@ -413,6 +501,7 @@ function dashboardView(slug, data) {
       h('h1', {}, data.business.name),
       h('p', { class: 'fetched' }, data.fetchedAt ? `Updated ${fmtWhen(Date.parse(data.fetchedAt))}` : '')),
     h('div', { class: 'page-tools' },
+      h('a', { class: 'btn btn-gold', href: `#/b/${encodeURIComponent(slug)}/add` }, 'Add a customer'),
       session?.isTeam && h('a', { class: 'btn', href: '#/team' }, 'All businesses'),
       h('button', {
         class: 'btn',
@@ -426,6 +515,8 @@ function dashboardView(slug, data) {
 
   const page = h('div', { class: 'page wrap' },
     head,
+    session && adsPanel(slug, session.token, refreshList),
+    h('h2', { class: 'section-title' }, 'Your customers'),
     statsBlock(summary),
     h('p', { class: 'note' }, 'Unknown means nobody has recorded it yet. It does not mean zero.'),
     h('div', { class: 'filters', role: 'group', 'aria-label': 'Which leads to show' }, chips),
@@ -504,6 +595,7 @@ const OUTCOME_LABELS = {
   bookingStatus: 'Booking',
   jobStatus: 'Job',
   paymentStatus: 'Payment',
+  potentialMoney: 'Potential money',
   collectedRevenue: 'Money collected',
   directJobCosts: 'Job costs',
   otherCosts: 'Other costs',
@@ -663,6 +755,66 @@ async function renderLead(slug, key, ticket) {
   show(leadView(slug, data, lead));
 }
 
+// ---------- Add a customer by hand ----------
+async function renderAdd(slug, ticket) {
+  const data = await loadBusinessData(slug, ticket);
+  if (!data || ticket !== state.ticket) return;
+  if (!data.connected) {
+    show(notConnectedView(data));
+    return;
+  }
+  const session = getSession();
+  const labels = data.business.labels || {};
+  const message = h('p', { class: 'message', role: 'alert' });
+  const submit = h('button', { class: 'btn btn-gold', type: 'submit' }, 'Add to my customers');
+  const field = (id, label, attrs = {}) => h('label', { for: id }, label, h('input', { id, name: id, type: 'text', autocomplete: 'off', ...attrs }));
+  const form = h('form', {
+    class: 'outcome-form',
+    novalidate: true,
+    onSubmit: async (event) => {
+      event.preventDefault();
+      message.textContent = '';
+      submit.disabled = true;
+      submit.textContent = 'Saving...';
+      try {
+        const result = await api().add({
+          business: slug,
+          name: document.getElementById('name').value,
+          phone: document.getElementById('phone').value,
+          project: document.getElementById('project').value,
+          howFound: document.getElementById('howFound').value,
+          notes: document.getElementById('notes').value,
+        }, session.token);
+        data.leads.unshift(result.lead);
+        data.summary = result.summary;
+        data.fetchedAt = result.fetchedAt;
+        state.notice = { key: result.lead.key, text: 'Saved to your records.', good: true };
+        go(`#/b/${encodeURIComponent(slug)}/lead/${encodeURIComponent(result.lead.key)}`);
+      } catch (error) {
+        if (handleSignedOut(error, slug)) return;
+        message.textContent = error.message;
+        submit.disabled = false;
+        submit.textContent = 'Add to my customers';
+      }
+    },
+  },
+  field('name', 'Their name', { required: true, autocomplete: 'name' }),
+  field('phone', 'Their phone', { required: true, inputmode: 'tel', autocomplete: 'tel' }),
+  field('project', labels.project || 'What they need'),
+  h('label', { for: 'howFound' }, 'How they found you',
+    h('select', { id: 'howFound', name: 'howFound' },
+      h('option', { value: '' }, 'Choose one'),
+      HAND_SOURCES.map((option) => h('option', { value: option }, option)))),
+  h('label', { for: 'notes' }, 'Notes', h('textarea', { id: 'notes', name: 'notes', rows: 3, maxlength: NOTES_MAX })),
+  message,
+  h('div', { class: 'save-row' }, submit));
+  show(h('div', { class: 'page wrap add-page' },
+    h('a', { class: 'crumb', href: `#/b/${encodeURIComponent(slug)}` }, `Back to ${data.business.name}`),
+    h('h1', {}, 'Add a customer'),
+    h('p', { class: 'fetched' }, 'For someone who called, messaged or walked in. Website forms show up on their own.'),
+    form));
+}
+
 // ---------- Team overview ----------
 async function renderTeam(ticket) {
   const session = getSession();
@@ -708,6 +860,7 @@ export async function route() {
   if (parts[0] === 'sign-in' && parts[1]) return renderSignIn(parts[1], ticket);
   if (parts[0] === 'team') return renderTeam(ticket);
   if (parts[0] === 'b' && parts[1] && parts[2] === 'lead' && parts[3]) return renderLead(parts[1], parts[3], ticket);
+  if (parts[0] === 'b' && parts[1] && parts[2] === 'add') return renderAdd(parts[1], ticket);
   if (parts[0] === 'b' && parts[1]) return renderBusiness(parts[1], ticket);
   return renderPicker(ticket);
 }

@@ -25,6 +25,7 @@ export const FIELD_HEADERS = {
   jobStatus: ['Job Status'],
   paymentStatus: ['Payment Status'],
   collectedRevenue: ['Collected Revenue'],
+  potentialMoney: ['Potential Money'],
   directJobCosts: ['Direct Job Costs'],
   otherCosts: ['Other Attributable Costs'],
   outcomeNotes: ['Outcome Notes'],
@@ -37,9 +38,10 @@ export const STATUS_OPTIONS = {
   jobStatus: ['Pending', 'In progress', 'Completed', 'Canceled', 'No-show'],
   paymentStatus: ['Unpaid', 'Deposit paid', 'Paid in full', 'Refunded'],
 };
-export const MONEY_FIELDS = ['collectedRevenue', 'directJobCosts', 'otherCosts'];
+export const MONEY_FIELDS = ['potentialMoney', 'collectedRevenue', 'directJobCosts', 'otherCosts'];
 export const OUTCOME_FIELDS = [...Object.keys(STATUS_OPTIONS), ...MONEY_FIELDS, 'outcomeNotes'];
-const REQUIRED_FIELDS = ['timestamp', 'name', 'phone', ...OUTCOME_FIELDS, 'crmUpdatedAt'];
+// Potential Money was added later, so a tab without it still reads. Saving it there is refused, not misplaced.
+const REQUIRED_FIELDS = ['timestamp', 'name', 'phone', ...OUTCOME_FIELDS.filter((field) => field !== 'potentialMoney'), 'crmUpdatedAt'];
 
 export const NOTES_MAX = 2000;
 const MERGE_WINDOW_MS = 10 * 60 * 1000;
@@ -95,8 +97,14 @@ export function isTestRecord(fields) {
 export function sourceKind(source) {
   const text = cell(source);
   if (!text || /^unknown$/i.test(text)) return 'none';
+  if (/^added by hand: (called|messaged) from an ad/i.test(text)) return 'ad';
   if (/facebook|instagram|\bmeta\b|\bfb\b|\big\b|fbclid|\bad_id=|\bcampaign_id=|utm_medium=paid/i.test(text)) return 'ad';
   return 'other';
+}
+
+export function adIdFromSource(source) {
+  const match = /\bad_id=(\d+)/.exec(cell(source));
+  return match ? match[1] : '';
 }
 
 function hashText(text) {
@@ -208,6 +216,14 @@ function moneyTotal(leads, field) {
   };
 }
 
+// Money still in play: a lead with an amount on it that is not paid off and not lost.
+function isStillOpen(lead) {
+  if (['Not a fit', 'Bad number'].includes(lead.contactStatus)) return false;
+  if (lead.bookingStatus === 'Canceled') return false;
+  if (['Canceled', 'No-show'].includes(lead.jobStatus)) return false;
+  return !['Paid in full', 'Refunded'].includes(lead.paymentStatus);
+}
+
 // Tests never count. A stage with nothing recorded is null (shown as Unknown), not 0.
 export function summarize(allLeads = []) {
   const leads = allLeads.filter((lead) => !lead.isTest);
@@ -222,10 +238,34 @@ export function summarize(allLeads = []) {
       stage('completed', 'Finished', leads, 'jobStatus', ['Completed']),
       stage('paid', 'Paid', leads, 'paymentStatus', ['Deposit paid', 'Paid in full']),
     ],
+    potential: moneyTotal(leads.filter(isStillOpen), 'potentialMoney'),
     collected: moneyTotal(leads, 'collectedRevenue'),
     directCosts: moneyTotal(leads, 'directJobCosts'),
     otherCosts: moneyTotal(leads, 'otherCosts'),
   };
+}
+
+// Customers who phone or walk in never touch the form, so an owner can add them by hand.
+export const HAND_SOURCES = ['Called from an ad', 'Messaged from an ad', 'Referral', 'Walk-in', 'Other'];
+export const isAddedByHand = (lead) => /^manual-/.test(lead.leadId || '');
+
+export function validateNewLead(input) {
+  const errors = [];
+  const text = (value, max) => (typeof value === 'string' ? value : '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim().slice(0, max);
+  const clean = {
+    name: text(input?.name, 200),
+    phone: text(input?.phone, 40),
+    project: text(input?.project, 200),
+    howFound: text(input?.howFound, 40),
+    notes: text(input?.notes, NOTES_MAX),
+  };
+  if (!clean.name) errors.push('Enter their name.');
+  const digits = clean.phone.replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 15) errors.push('Enter their phone number.');
+  if (!HAND_SOURCES.includes(clean.howFound)) errors.push('Choose how they found you.');
+  return { clean, errors };
 }
 
 // Only outcome fields can ever change from the portal. Inquiry data stays as the customer gave it.
