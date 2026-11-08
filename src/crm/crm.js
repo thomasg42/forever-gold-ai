@@ -350,7 +350,7 @@ function filteredLeads(leads) {
   });
 }
 
-function leadCard(slug, lead, labels) {
+function leadCard(slug, lead, labels, onContacted = () => {}) {
   const pills = [
     lead.isTest && h('span', { class: 'pill test' }, 'Test'),
     needsFollowUp(lead) && h('span', { class: 'pill todo' }, 'Needs follow-up'),
@@ -361,20 +361,44 @@ function leadCard(slug, lead, labels) {
   ];
   const tel = telHref(lead.phone);
   const name = lead.name || 'No name recorded';
+  const contacted = ['Reached', 'Qualified', 'Not a fit'].includes(lead.contactStatus);
+  const box = h('input', { type: 'checkbox', checked: contacted, 'aria-label': `Did we contact ${name}?` });
+  box.addEventListener('change', () => onContacted(lead, box));
   return h('li', { class: 'lead' },
     h('a', { class: 'lead-main', href: `#/b/${encodeURIComponent(slug)}/lead/${encodeURIComponent(lead.key)}` },
       h('span', { class: 'lead-name' }, name),
       h('span', { class: 'lead-meta' }, fmtWhen(lead.receivedAt)),
       h('span', { class: 'lead-meta' }, [lead.project && `${labels.project || 'Project'}: ${lead.project}`, state.adNames[adIdFromSource(lead.source)] ? `Ad: ${state.adNames[adIdFromSource(lead.source)]}` : SOURCE_LABEL[lead.sourceKind]].filter(Boolean).join(' · ')),
       h('span', { class: 'pills' }, pills)),
+    !lead.isTest && h('label', { class: 'lead-contacted' }, box, h('span', {}, 'Contacted?')),
     tel && h('a', { class: 'lead-call', href: tel, 'aria-label': `Call ${name} at ${fmtPhone(lead.phone)}` }, 'Call'));
+}
+
+// One tap: yes means Reached, no clears it. It only changes once the server confirms the save.
+async function saveContacted(slug, data, lead, box) {
+  const session = getSession();
+  box.disabled = true;
+  try {
+    const result = await api().update({ business: slug, key: lead.key, changes: { contactStatus: box.checked ? 'Reached' : '' }, expectedUpdatedAt: lead.crmUpdatedAt }, session.token);
+    const index = data.leads.findIndex((item) => item.key === lead.key);
+    if (index >= 0) data.leads[index] = result.lead;
+    data.summary = result.summary;
+    data.fetchedAt = result.fetchedAt;
+    route();
+  } catch (error) {
+    if (handleSignedOut(error, slug)) return;
+    box.checked = !box.checked;
+    box.disabled = false;
+    const card = box.closest('.lead');
+    if (card) card.append(h('p', { class: 'message', role: 'alert' }, error.message));
+  }
 }
 
 function renderList(container, slug, data) {
   const shown = filteredLeads(data.leads);
   const labels = data.business.labels || {};
   if (shown.length) {
-    container.replaceChildren(h('ul', { class: 'leads', 'aria-label': `${shown.length} leads` }, shown.map((lead) => leadCard(slug, lead, labels))));
+    container.replaceChildren(h('ul', { class: 'leads', 'aria-label': `${shown.length} leads` }, shown.map((lead) => leadCard(slug, lead, labels, (item, box) => saveContacted(slug, data, item, box)))));
     return;
   }
   const words = data.leads.some((lead) => !lead.isTest)
@@ -406,6 +430,7 @@ function adsBoard(board) {
   const { totals, forms, funnel, costs } = board;
   const fromYourRecords = funnel.notRecorded ? `${funnel.notRecorded} not recorded` : null;
   return [
+    (board.alerts || []).length > 0 && h('ul', { class: 'alerts', 'aria-label': 'Alerts' }, board.alerts.map((alert) => h('li', { class: 'message' }, alert.text))),
     h('h3', { class: 'board-title' }, 'From Meta'),
     h('dl', { class: 'stats' },
       statBox('Ad spend', fmtMoney(totals.spend)),

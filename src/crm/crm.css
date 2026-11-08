@@ -194,3 +194,9 @@ input[type="checkbox"] { display: inline-block; width: 24px; min-height: 24px; h
 .ad-facts dd { margin: 0; color: var(--ivory); font-weight: 600; }
 .team-link a { display: inline-flex; align-items: center; min-height: var(--tap); }
 .add-page { max-width: 34rem; }
+.lead { flex-wrap: wrap; }
+.lead-contacted { flex: none; display: flex; align-items: center; gap: 6px; min-height: var(--tap); padding: 0 12px; border-left: 1px solid var(--graphite-700); font-weight: 600; color: var(--silver-200); cursor: pointer; }
+.lead-contacted input { margin: 0; }
+.lead > .message { flex-basis: 100%; margin: 0 12px 12px; }
+.alerts { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.alerts .message { margin: 0; }
