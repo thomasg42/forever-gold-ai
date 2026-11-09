@@ -63,6 +63,7 @@ const state = {
   filter: { view: 'follow', source: 'all', q: '', showTests: false },
   adsRange: 'launch',
   siteRange: '7d',
+  siteCache: {},
   adNames: {},
 };
 
@@ -104,6 +105,7 @@ function clearSession() {
 function signOut() {
   clearSession();
   state.cache = {};
+  state.siteCache = {};
   state.drafts = {};
   go('#/');
 }
@@ -292,7 +294,9 @@ async function renderSignIn(slug, ticket) {
         const result = await api().login(slug, pin.value, keep);
         saveSession({ token: result.token, slug: result.slug, isTeam: result.isTeam, expiresAt: result.expiresAt }, keep);
         state.cache = {};
+        state.siteCache = {};
         state.drafts = {};
+        if (!result.isTeam) requestSite(slug, result.token, state.siteRange);
         go(result.isTeam ? '#/team' : `#/b/${encodeURIComponent(slug)}`);
       } catch (error) {
         message.textContent = error.message;
@@ -504,6 +508,52 @@ function adsPanel(slug, token, onNames) {
 // ---------- Website numbers ----------
 const SITE_RANGES = [['today', 'Today'], ['7d', 'Last 7 days'], ['month', 'Whole month'], ['all', 'Entire time']];
 
+function syncMark() {
+  return h('span', { class: 'sync-mark', role: 'status', 'aria-label': 'Syncing' });
+}
+
+function waitingSite() {
+  return [
+    h('p', { class: 'note sync-line' }, syncMark(), ' Syncing with your website.'),
+    h('dl', { class: 'stats' },
+      statBox('Viewed', syncMark(), 'People who opened the site'),
+      statBox('Started a form', syncMark(), 'Filled in, then left without submit'),
+      statBox('Hit submit', syncMark(), 'The tap. It still has to reach the owner.'),
+      statBox('Call button', syncMark(), 'A tap. This does not show whether the owner answered.')),
+    h('h3', { class: 'board-title' }, 'Top sections'),
+    h('p', { class: 'note sync-line' }, syncMark(), ' Syncing'),
+    h('h3', { class: 'board-title' }, 'From the form'),
+    h('p', { class: 'note sync-line' }, syncMark(), ' Syncing'),
+  ];
+}
+
+function siteKey(slug, range) {
+  return `${slug}:${range}`;
+}
+
+function clearSite(slug) {
+  for (const key of Object.keys(state.siteCache)) {
+    if (key.startsWith(`${slug}:`)) delete state.siteCache[key];
+  }
+}
+
+function requestSite(slug, token, range, fresh) {
+  const key = siteKey(slug, range || state.siteRange);
+  if (fresh) delete state.siteCache[key];
+  const hit = state.siteCache[key];
+  if (hit?.board) return Promise.resolve(hit.board);
+  if (hit?.promise) return hit.promise;
+  const promise = api().site(slug, range || state.siteRange, token).then((board) => {
+    state.siteCache[key] = { board };
+    return board;
+  }).catch((error) => {
+    if (state.siteCache[key]?.promise === promise) delete state.siteCache[key];
+    throw error;
+  });
+  state.siteCache[key] = { promise };
+  return promise;
+}
+
 function dialHref(phone) {
   const digits = String(phone || '').replace(/[^\d+]/g, '');
   return digits ? `tel:${digits}` : '';
@@ -546,9 +596,15 @@ function sitePanel(slug, token) {
   const body = h('div', { 'aria-live': 'polite' });
   const panel = h('section', { class: 'site-panel', 'aria-labelledby': 'site-title' }, h('h2', { id: 'site-title' }, 'Your website'));
   const chips = h('div', { class: 'filters', role: 'group', 'aria-label': 'Which website dates to show' });
-  const load = async () => {
+  const paint = (board) => {
+    const when = Date.parse(board?.fetchedAt || '') || Date.now();
+    const waiting = !board || !board.collecting || !board.seen;
+    const stamp = h('p', { class: 'fetched' }, `${waiting ? 'Checked' : 'Counted'} ${fmtWhen(when)}`);
+    body.replaceChildren(stamp, ...(waiting ? waitingSite() : siteBoard(board)).filter(Boolean));
+  };
+  const load = async (fresh) => {
     if (typeof api().site !== 'function') {
-      panel.replaceChildren(panel.firstChild, h('p', { class: 'note' }, 'Website numbers are not collecting yet. This does not mean nobody visited.'));
+      paint(null);
       return;
     }
     chips.replaceChildren(...SITE_RANGES.map(([id, label]) => h('button', {
@@ -557,34 +613,30 @@ function sitePanel(slug, token) {
       'aria-pressed': String(state.siteRange === id),
       onClick: () => {
         state.siteRange = id;
-        load();
+        load(true);
       },
     }, label)));
-    body.replaceChildren(h('p', { class: 'note' }, 'Loading your website numbers...'));
     const asked = state.siteRange;
+    const ready = !fresh && state.siteCache[siteKey(slug, asked)]?.board;
+    if (ready) paint(ready);
+    else body.replaceChildren(...waitingSite());
     try {
-      const board = await api().site(slug, asked, token);
+      const board = await requestSite(slug, token, asked, fresh);
       if (asked !== state.siteRange) return;
-      const when = Date.parse(board.fetchedAt || '') || Date.now();
-      const stamp = h('p', { class: 'fetched' }, `${board.seen ? 'Counted' : 'Checked'} ${fmtWhen(when)}`);
-      if (!board.collecting || !board.seen) {
-        body.replaceChildren(stamp, h('p', { class: 'note' }, 'Website numbers are not collecting yet. This does not mean nobody visited.'));
-        return;
-      }
-      body.replaceChildren(stamp, ...siteBoard(board).filter(Boolean));
+      paint(board);
     } catch (error) {
       if (asked !== state.siteRange) return;
-      body.replaceChildren(h('p', { class: 'message', role: 'alert' }, error.message));
+      body.replaceChildren(...waitingSite(), h('p', { class: 'message', role: 'alert' }, error.message));
     }
   };
   panel.append(chips, body);
-  load();
+  load(false);
   return panel;
 }
 
 function websiteLine(site) {
   if (!site) return '';
-  if (!site.collecting || !site.seen) return 'Website not collecting yet.';
+  if (!site.collecting || !site.seen) return 'Syncing with the website.';
   return `Last 7 days: ${count(site.people)} people, ${count(site.formStarts)} started a form, ${count(site.forms)} submitted, ${count(site.calls)} call taps.`;
 }
 
@@ -630,6 +682,7 @@ function dashboardView(slug, data) {
         type: 'button',
         onClick: () => {
           delete state.cache[slug];
+          clearSite(slug);
           route();
         },
       }, 'Refresh'),
@@ -684,6 +737,7 @@ function notConnectedView(data) {
           type: 'button',
           onClick: () => {
             delete state.cache[slug];
+            clearSite(slug);
             route();
           },
         }, 'Refresh'),
@@ -698,10 +752,22 @@ async function loadBusinessData(slug, ticket) {
     go(`#/sign-in/${encodeURIComponent(slug)}`);
     return null;
   }
-  if (state.cache[slug]) return state.cache[slug];
+  const siteJob = requestSite(slug, session.token, state.siteRange).catch(() => null);
+  const siteReady = Promise.race([
+    siteJob,
+    new Promise((resolve) => {
+      const timer = setTimeout(resolve, 4000);
+      if (timer && typeof timer.unref === 'function') timer.unref();
+    }),
+  ]);
+  if (state.cache[slug]) {
+    await siteReady;
+    return state.cache[slug];
+  }
   show(h('p', { class: 'wrap note' }, 'Loading your records...'));
   try {
     const data = await api().leads(slug, session.token);
+    await siteReady;
     if (ticket !== state.ticket) return null;
     state.cache[slug] = data;
     return data;
@@ -965,6 +1031,7 @@ async function renderTeam(ticket) {
   try {
     const data = await api().overview(session.token);
     if (ticket !== state.ticket) return;
+    for (const business of data.businesses) requestSite(business.slug, session.token, '7d');
     const line = (business) => websiteLine(business.website);
     show(h('div', { class: 'page wrap' },
       h('div', { class: 'page-head' },
