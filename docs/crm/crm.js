@@ -50,6 +50,7 @@ const liveApi = {
   update: (payload, token) => call('/api/leads/update', { method: 'POST', body: payload, token }),
   add: (payload, token) => call('/api/leads/add', { method: 'POST', body: payload, token }),
   ads: (business, range, token) => call(`/api/ads?business=${encodeURIComponent(business)}&range=${encodeURIComponent(range)}`, { token }),
+  site: (business, range, token) => call(`/api/site?business=${encodeURIComponent(business)}&range=${encodeURIComponent(range)}`, { token }),
 };
 const api = () => window.CRM_API || liveApi;
 
@@ -61,6 +62,7 @@ const state = {
   drafts: {},
   filter: { view: 'follow', source: 'all', q: '', showTests: false },
   adsRange: 'launch',
+  siteRange: '7d',
   adNames: {},
 };
 
@@ -221,7 +223,7 @@ async function renderPicker(ticket) {
   show(
     h('section', { class: 'hero wrap' },
       h('h1', {}, 'Forever Gold CRM'),
-      h('p', {}, 'Tap your business. Enter your PIN. See your customers.')),
+      h('p', {}, 'Tap your business. Enter your PIN. See your website and your customers.')),
     h('section', { class: 'wrap', 'aria-label': 'Choose your business' }, list,
       h('p', { class: 'team-link' }, h('a', { href: teamHref }, 'Forever Gold team sign-in'))),
     journey,
@@ -491,6 +493,75 @@ function adsPanel(slug, token, onNames) {
   return panel;
 }
 
+// ---------- Website numbers ----------
+const SITE_RANGES = [['today', 'Today'], ['7d', 'Last 7 days'], ['all', 'Everything']];
+
+function siteBoard(board) {
+  const servicesNote = board.services.topLabel
+    ? `Most opened: ${board.services.topLabel}`
+    : 'No services page is marked yet.';
+  return [
+    h('dl', { class: 'stats' },
+      statBox('Visits', count(board.visits), 'Page loads'),
+      statBox('People', count(board.people), 'This browser, once a day'),
+      statBox('Clicked around', count(board.peopleClicking), 'People who opened another tab'),
+      statBox('Services page', board.services.visits === null ? null : count(board.services.visits), servicesNote),
+      statBox('Form submits', count(board.forms), 'The tap. It still has to reach the owner.'),
+      statBox('Call taps', count(board.calls), 'A tap, not a finished call')),
+    board.pages.length > 0 && h('h3', { class: 'board-title' }, 'Pages they open'),
+    board.pages.length > 0 && h('ul', { class: 'ad-list' }, board.pages.map((page) => h('li', { class: page.service ? 'ad-card marked' : 'ad-card' },
+      h('h3', {}, page.label || page.path),
+      h('p', { class: 'note' }, page.path),
+      h('dl', { class: 'ad-facts' },
+        h('div', {}, h('dt', {}, 'Visits'), h('dd', {}, count(page.visits))),
+        h('div', {}, h('dt', {}, 'Clicks'), h('dd', {}, count(page.clicks))))))),
+  ];
+}
+
+function sitePanel(slug, token) {
+  const body = h('div', { 'aria-live': 'polite' });
+  const panel = h('section', { class: 'site-panel', 'aria-labelledby': 'site-title' }, h('h2', { id: 'site-title' }, 'Your website'));
+  const chips = h('div', { class: 'filters', role: 'group', 'aria-label': 'Which website dates to show' });
+  const load = async () => {
+    if (typeof api().site !== 'function') {
+      panel.replaceChildren(panel.firstChild, h('p', { class: 'note' }, 'Website numbers are not collecting yet. This does not mean nobody visited.'));
+      return;
+    }
+    chips.replaceChildren(...SITE_RANGES.map(([id, label]) => h('button', {
+      class: 'chip',
+      type: 'button',
+      'aria-pressed': String(state.siteRange === id),
+      onClick: () => {
+        state.siteRange = id;
+        load();
+      },
+    }, label)));
+    body.replaceChildren(h('p', { class: 'note' }, 'Loading your website numbers...'));
+    const asked = state.siteRange;
+    try {
+      const board = await api().site(slug, asked, token);
+      if (asked !== state.siteRange) return;
+      if (!board.collecting || !board.seen) {
+        body.replaceChildren(h('p', { class: 'note' }, 'Website numbers are not collecting yet. This does not mean nobody visited.'));
+        return;
+      }
+      body.replaceChildren(...siteBoard(board).filter(Boolean));
+    } catch (error) {
+      if (asked !== state.siteRange) return;
+      body.replaceChildren(h('p', { class: 'message', role: 'alert' }, error.message));
+    }
+  };
+  panel.append(chips, body);
+  load();
+  return panel;
+}
+
+function websiteLine(site) {
+  if (!site) return '';
+  if (!site.collecting || !site.seen) return 'Website not collecting yet.';
+  return `Last 7 days: ${count(site.visits)} visits, ${count(site.people)} people, ${count(site.forms)} forms, ${count(site.calls)} calls.`;
+}
+
 function dashboardView(slug, data) {
   const session = getSession();
   const listArea = h('div', { 'aria-live': 'polite' });
@@ -540,6 +611,7 @@ function dashboardView(slug, data) {
 
   const page = h('div', { class: 'page wrap' },
     head,
+    session && sitePanel(slug, session.token),
     session && adsPanel(slug, session.token, refreshList),
     h('h2', { class: 'section-title' }, 'Your customers'),
     statsBlock(summary),
@@ -575,10 +647,12 @@ function dashboardView(slug, data) {
 }
 
 function notConnectedView(data) {
+  const session = getSession();
   return h('div', { class: 'page wrap' },
     h('div', { class: 'page-head' },
       h('h1', {}, data.business.name),
       h('div', { class: 'page-tools' }, h('button', { class: 'text-btn', type: 'button', onClick: signOut }, 'Sign out'))),
+    session && sitePanel(data.business.slug, session.token),
     h('p', { class: 'empty' }, `Your records are not connected yet. This does not mean you have no customers. Call ${HELP_PHONE} with any questions.`));
 }
 
@@ -851,6 +925,7 @@ async function renderTeam(ticket) {
   try {
     const data = await api().overview(session.token);
     if (ticket !== state.ticket) return;
+    const line = (business) => websiteLine(business.website);
     show(h('div', { class: 'page wrap' },
       h('div', { class: 'page-head' },
         h('div', {}, h('h1', {}, 'All businesses'), h('p', { class: 'fetched' }, `Updated ${fmtWhen(Date.parse(data.fetchedAt))}`)),
@@ -859,7 +934,8 @@ async function renderTeam(ticket) {
         h('h2', {}, h('a', { href: `#/b/${encodeURIComponent(business.slug)}` }, business.name)),
         business.summary
           ? statsBlock(business.summary)
-          : h('p', { class: business.error ? 'message' : 'note' }, business.error ? business.message : 'Records not connected yet.'))))));
+          : h('p', { class: business.error ? 'message' : 'note' }, business.error ? business.message : 'Records not connected yet.'),
+        line(business) ? h('p', { class: 'note' }, line(business)) : null)))));
   } catch (error) {
     if (ticket !== state.ticket) return;
     if (!handleSignedOut(error, state.teamSlug)) show(errorBox(error, route));

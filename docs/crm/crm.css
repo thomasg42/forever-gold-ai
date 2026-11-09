@@ -94,8 +94,12 @@ input[type="checkbox"] { display: inline-block; width: 24px; min-height: 24px; h
 /* Picker */
 .hero { padding-block: 36px 24px; }
 .hero p { margin-top: 12px; max-width: 42rem; color: var(--silver-200); font-size: 1.1rem; }
-.picker { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-@media (min-width: 640px) { .picker { grid-template-columns: 1fr 1fr; } }
+.picker { list-style: none; margin: 0; padding: 0 0 8px; display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
+.picker > li { flex: 0 0 min(240px, 78vw); scroll-snap-align: start; }
+@media (min-width: 900px) {
+  .picker { flex-wrap: wrap; overflow: visible; }
+  .picker > li { flex: 1 1 200px; }
+}
 .pick {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   min-height: 80px; padding: 16px 18px;
@@ -178,8 +182,9 @@ input[type="checkbox"] { display: inline-block; width: 24px; min-height: 24px; h
 .team-card h2 a { color: var(--ivory); }
 
 /* Ad numbers. Static on purpose, like the rest of the working tool. */
-.ads-panel { margin-top: 20px; padding: 16px; background: var(--black-900); border: 1px solid var(--graphite-700); border-radius: var(--radius); }
-.ads-panel .filters { margin-top: 12px; }
+.ads-panel, .site-panel { margin-top: 20px; padding: 16px; background: var(--black-900); border: 1px solid var(--graphite-700); border-radius: var(--radius); }
+.ads-panel .filters, .site-panel .filters { margin-top: 12px; }
+.ad-card.marked { border-color: var(--gold-500); }
 .board-title { margin-top: 18px; font-size: 1rem; font-weight: 600; }
 .board-title + .stats { margin-top: 8px; }
 .section-title { margin-top: 28px; }
