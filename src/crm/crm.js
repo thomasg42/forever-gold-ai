@@ -50,7 +50,7 @@ const liveApi = {
   update: (payload, token) => call('/api/leads/update', { method: 'POST', body: payload, token }),
   add: (payload, token) => call('/api/leads/add', { method: 'POST', body: payload, token }),
   ads: (business, range, token) => call(`/api/ads?business=${encodeURIComponent(business)}&range=${encodeURIComponent(range)}`, { token }),
-  site: (business, range, token) => call(`/api/site?business=${encodeURIComponent(business)}&range=${encodeURIComponent(range)}`, { token }),
+  site: (business, range, token) => call(`/api/site?business=${encodeURIComponent(business)}&range=${encodeURIComponent(range)}&t=${Date.now()}`, { token }),
 };
 const api = () => window.CRM_API || liveApi;
 
@@ -126,6 +126,12 @@ function h(tag, props = {}, ...children) {
   return el;
 }
 
+function setBrand(name) {
+  const slot = document.getElementById('brand-name');
+  const label = name ? `Forever Gold CRM / ${name}` : 'Forever Gold CRM';
+  if (slot) slot.textContent = label;
+  document.title = label;
+}
 const appEl = () => document.getElementById('app');
 function show(...nodes) {
   const app = appEl();
@@ -213,6 +219,7 @@ function lightUpJourney(root) {
 }
 
 async function renderPicker(ticket) {
+  setBrand('');
   const session = getSession();
   const list = h('ul', { class: 'picker', 'aria-label': 'Businesses' }, h('li', { class: 'note' }, 'Loading businesses...'));
   const journey = h('section', { class: 'journey wrap', 'aria-labelledby': 'journey-title' },
@@ -259,6 +266,7 @@ async function renderSignIn(slug, ticket) {
       }
       name = business.name;
     }
+    setBrand(slug === state.teamSlug ? '' : name);
   } catch (error) {
     if (ticket === state.ticket) show(errorBox(error, route));
     return;
@@ -557,11 +565,13 @@ function sitePanel(slug, token) {
     try {
       const board = await api().site(slug, asked, token);
       if (asked !== state.siteRange) return;
+      const when = Date.parse(board.fetchedAt || '') || Date.now();
+      const stamp = h('p', { class: 'fetched' }, `${board.seen ? 'Counted' : 'Checked'} ${fmtWhen(when)}`);
       if (!board.collecting || !board.seen) {
-        body.replaceChildren(h('p', { class: 'note' }, 'Website numbers are not collecting yet. This does not mean nobody visited.'));
+        body.replaceChildren(stamp, h('p', { class: 'note' }, 'Website numbers are not collecting yet. This does not mean nobody visited.'));
         return;
       }
-      body.replaceChildren(...siteBoard(board).filter(Boolean));
+      body.replaceChildren(stamp, ...siteBoard(board).filter(Boolean));
     } catch (error) {
       if (asked !== state.siteRange) return;
       body.replaceChildren(h('p', { class: 'message', role: 'alert' }, error.message));
@@ -664,11 +674,21 @@ function dashboardView(slug, data) {
 
 function notConnectedView(data) {
   const session = getSession();
+  const slug = data.business.slug;
   return h('div', { class: 'page wrap' },
     h('div', { class: 'page-head' },
       h('h1', {}, data.business.name),
-      h('div', { class: 'page-tools' }, h('button', { class: 'text-btn', type: 'button', onClick: signOut }, 'Sign out'))),
-    session && sitePanel(data.business.slug, session.token),
+      h('div', { class: 'page-tools' },
+        h('button', {
+          class: 'btn',
+          type: 'button',
+          onClick: () => {
+            delete state.cache[slug];
+            route();
+          },
+        }, 'Refresh'),
+        h('button', { class: 'text-btn', type: 'button', onClick: signOut }, 'Sign out'))),
+    session && sitePanel(slug, session.token),
     h('p', { class: 'empty' }, `Your records are not connected yet. This does not mean you have no customers. Call ${HELP_PHONE} with any questions.`));
 }
 
@@ -695,6 +715,7 @@ async function loadBusinessData(slug, ticket) {
 async function renderBusiness(slug, ticket) {
   const data = await loadBusinessData(slug, ticket);
   if (!data || ticket !== state.ticket) return;
+  setBrand(data.business.name);
   show(data.connected ? dashboardView(slug, data) : notConnectedView(data));
 }
 
@@ -859,6 +880,7 @@ function leadView(slug, data, lead) {
 async function renderLead(slug, key, ticket) {
   const data = await loadBusinessData(slug, ticket);
   if (!data || ticket !== state.ticket) return;
+  setBrand(data.business.name);
   const lead = data.leads.find((item) => item.key === key);
   if (!lead) {
     show(h('div', { class: 'page wrap' },
@@ -874,6 +896,7 @@ async function renderLead(slug, key, ticket) {
 async function renderAdd(slug, ticket) {
   const data = await loadBusinessData(slug, ticket);
   if (!data || ticket !== state.ticket) return;
+  setBrand(data.business.name);
   if (!data.connected) {
     show(notConnectedView(data));
     return;
@@ -937,6 +960,7 @@ async function renderTeam(ticket) {
     go(`#/sign-in/${encodeURIComponent(state.teamSlug)}`);
     return;
   }
+  setBrand('');
   show(h('p', { class: 'wrap note' }, 'Loading all businesses...'));
   try {
     const data = await api().overview(session.token);

@@ -53,8 +53,9 @@ main { outline: none; }
   background: var(--black-900);
   border-bottom: 1px solid var(--graphite-700);
 }
-.brand { display: flex; align-items: center; gap: 8px; min-height: var(--tap); color: var(--ivory); text-decoration: none; font-weight: 600; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 8px; flex: 1 1 180px; min-height: var(--tap); min-width: 0; color: var(--ivory); text-decoration: none; font-weight: 600; }
 .brand img { width: 40px; height: 40px; flex: none; }
+.brand span { min-width: 0; line-height: 1.2; }
 .call-now {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   min-height: var(--tap); min-width: var(--tap); padding: 0 14px;
