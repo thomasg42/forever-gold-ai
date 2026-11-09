@@ -184,7 +184,7 @@ input[type="checkbox"] { display: inline-block; width: 24px; min-height: 24px; h
 /* Ad numbers. Static on purpose, like the rest of the working tool. */
 .ads-panel, .site-panel { margin-top: 20px; padding: 16px; background: var(--black-900); border: 1px solid var(--graphite-700); border-radius: var(--radius); }
 .ads-panel .filters, .site-panel .filters { margin-top: 12px; }
-.ad-card.marked { border-color: var(--gold-500); }
+.site-contact p { margin: 4px 0; }
 .board-title { margin-top: 18px; font-size: 1rem; font-weight: 600; }
 .board-title + .stats { margin-top: 8px; }
 .section-title { margin-top: 28px; }

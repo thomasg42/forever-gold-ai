@@ -494,27 +494,43 @@ function adsPanel(slug, token, onNames) {
 }
 
 // ---------- Website numbers ----------
-const SITE_RANGES = [['today', 'Today'], ['7d', 'Last 7 days'], ['all', 'Everything']];
+const SITE_RANGES = [['today', 'Today'], ['7d', 'Last 7 days'], ['month', 'Whole month'], ['all', 'Entire time']];
+
+function dialHref(phone) {
+  const digits = String(phone || '').replace(/[^\d+]/g, '');
+  return digits ? `tel:${digits}` : '';
+}
 
 function siteBoard(board) {
-  const servicesNote = board.services.topLabel
-    ? `Most opened: ${board.services.topLabel}`
-    : 'No services page is marked yet.';
+  const rangeNote = board.range?.key === 'all'
+    ? 'Entire time starts the day counting began on this site. Earlier visits are not here.'
+    : (board.range?.key === 'month' ? 'This calendar month, Denver time.' : '');
+  const top = Array.isArray(board.sections) ? board.sections.slice(0, 3) : [];
+  const contacts = Array.isArray(board.contacts) ? board.contacts : [];
   return [
+    rangeNote && h('p', { class: 'note' }, rangeNote),
     h('dl', { class: 'stats' },
-      statBox('Visits', count(board.visits), 'Page loads'),
-      statBox('People', count(board.people), 'This browser, once a day'),
-      statBox('Clicked around', count(board.peopleClicking), 'People who opened another tab'),
-      statBox('Services page', board.services.visits === null ? null : count(board.services.visits), servicesNote),
-      statBox('Form submits', count(board.forms), 'The tap. It still has to reach the owner.'),
-      statBox('Call taps', count(board.calls), 'A tap, not a finished call')),
-    board.pages.length > 0 && h('h3', { class: 'board-title' }, 'Pages they open'),
-    board.pages.length > 0 && h('ul', { class: 'ad-list' }, board.pages.map((page) => h('li', { class: page.service ? 'ad-card marked' : 'ad-card' },
-      h('h3', {}, page.label || page.path),
-      h('p', { class: 'note' }, page.path),
-      h('dl', { class: 'ad-facts' },
-        h('div', {}, h('dt', {}, 'Visits'), h('dd', {}, count(page.visits))),
-        h('div', {}, h('dt', {}, 'Clicks'), h('dd', {}, count(page.clicks))))))),
+      statBox('Viewed', count(board.people), 'People who opened the site'),
+      statBox('Started a form', count(board.formStarts), 'Filled in, then left without submit'),
+      statBox('Hit submit', count(board.forms), 'The tap. It still has to reach the owner.'),
+      statBox('Call button', count(board.calls), 'A tap. This does not show whether the owner answered.')),
+    h('h3', { class: 'board-title' }, 'Top sections'),
+    top.length === 0
+      ? h('p', { class: 'note' }, 'No section clicks in this range.')
+      : h('ol', { class: 'ad-list' }, top.map((section) => h('li', { class: 'ad-card' },
+        h('h3', {}, section.label),
+        h('p', { class: 'note' }, `${count(section.clicks)} clicks`)))),
+    h('h3', { class: 'board-title' }, 'From the form'),
+    contacts.length === 0
+      ? h('p', { class: 'note' }, 'No one has hit submit in this range.')
+      : h('ul', { class: 'ad-list' }, contacts.map((person) => h('li', { class: 'ad-card site-contact' },
+        h('h3', {}, person.name || 'Name not given'),
+        person.phone
+          ? h('p', {}, h('a', { href: dialHref(person.phone) }, person.phone))
+          : h('p', { class: 'note' }, 'No phone'),
+        person.email
+          ? h('p', {}, h('a', { href: `mailto:${person.email}` }, person.email))
+          : h('p', { class: 'note' }, 'No email')))),
   ];
 }
 
@@ -559,7 +575,7 @@ function sitePanel(slug, token) {
 function websiteLine(site) {
   if (!site) return '';
   if (!site.collecting || !site.seen) return 'Website not collecting yet.';
-  return `Last 7 days: ${count(site.visits)} visits, ${count(site.people)} people, ${count(site.forms)} forms, ${count(site.calls)} calls.`;
+  return `Last 7 days: ${count(site.people)} people, ${count(site.formStarts)} started a form, ${count(site.forms)} submitted, ${count(site.calls)} call taps.`;
 }
 
 function dashboardView(slug, data) {
