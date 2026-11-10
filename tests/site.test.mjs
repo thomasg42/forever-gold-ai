@@ -168,7 +168,7 @@ test('seo, assets, links, and page weight', () => {
     for (const script of document.querySelectorAll('script[src]')) {
       const src = script.getAttribute('src');
       if (/^https?:/i.test(src)) {
-        assert.equal(pageRel, 'systems/ai-receptionist/index.html', file);
+        assert.notEqual(pageRel, 'crm/index.html', file);
         assert.equal(src, goldieScript);
       }
     }
@@ -178,7 +178,7 @@ test('seo, assets, links, and page weight', () => {
       const decoded = href.replace(/&amp;/g, '&');
       if (/^https?:/.test(decoded)) {
         if (decoded === 'https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js') {
-          assert.equal(relPosix(docs, file), 'systems/ai-receptionist/index.html', file);
+          assert.notEqual(relPosix(docs, file), 'crm/index.html', file);
           continue;
         }
         assert.equal(allowedExternal(decoded), true, decoded);
@@ -304,8 +304,7 @@ test('system pages, work, stripe, and goldie', () => {
       assert.equal(copy.contains(slot), false);
       assert.match(slot.textContent, /Talk to Goldie/);
       assert.match(slot.textContent, /Tap to talk to Goldie, an AI receptionist built by Forever Gold AI\. She can book a free call with Thomas\./);
-      assert.equal(slot.querySelector('elevenlabs-convai').getAttribute('agent-id'), SITE.goldie.widget.agentId);
-      assert.equal(slot.querySelector('script').getAttribute('src'), 'https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js');
+      assert.equal(slot.querySelector('elevenlabs-convai'), null, 'one widget per page, from the layout');
       assert.match(slot.textContent, /Call \(406\) 698-6693/);
       assert.match(slot.textContent, /Text Thomas/);
     } else {
@@ -320,12 +319,15 @@ test('system pages, work, stripe, and goldie', () => {
     const rel = relPosix(docs, file);
     const html = readFileSync(file, 'utf8');
     const externalScripts = [...html.matchAll(/<script[^>]*\ssrc="(https?:[^"]+)"/gi)].map((m) => m[1]);
-    if (rel === 'systems/ai-receptionist/index.html') {
-      assert.deepEqual(externalScripts, ['https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js']);
-      assert.equal((html.match(/<elevenlabs-convai\b/g) || []).length, 1);
-    } else {
+    if (rel === 'crm/index.html') {
       assert.deepEqual(externalScripts, [], rel);
       assert.equal(html.includes('elevenlabs-convai'), false, rel);
+    } else {
+      // Goldie on every marketing page: one pinned widget, her agent, and the connect_to_thomas tool.
+      assert.deepEqual(externalScripts, ['https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js'], rel);
+      assert.equal((html.match(/<elevenlabs-convai\b/g) || []).length, 1, rel);
+      assert.ok(html.includes(`agent-id="${SITE.goldie.widget.agentId}"`), rel);
+      assert.ok(html.includes('assets/goldie-voice.js'), rel);
     }
     const loaders = html.match(/https:\/\/connect\.facebook\.net\/[^'"]+/g) || [];
     if (SITE.analytics && SITE.analytics.metaPixelId) {
@@ -336,7 +338,7 @@ test('system pages, work, stripe, and goldie', () => {
     } else {
       assert.deepEqual(loaders, [], rel);
     }
-    if (rel !== 'systems/ai-receptionist/index.html') {
+    if (rel === 'crm/index.html') {
       assert.equal(html.includes('agent_5801m626gmhgf3b9xajs3dz9e48b'), false, rel);
     }
   }
@@ -367,6 +369,8 @@ test('system pages, work, stripe, and goldie', () => {
     assert.ok(privacy.includes(needle), needle);
     assert.ok(sms.includes(needle), needle);
   }
+  assert.match(privacy, /<h2>Talking to Goldie<\/h2>/);
+  assert.match(privacy, /runs on ElevenLabs/);
   const rawBlob = walk(docs)
     .filter((f) => /\.(html|css|js|svg|txt|xml)$/i.test(f))
     .map((f) => readFileSync(f, 'utf8'))

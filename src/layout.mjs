@@ -287,9 +287,22 @@ export function ctaBand(ctx, { title, href, lead }) {
 </section>`;
 }
 
+export const GOLDIE_WIDGET_SRC = 'https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js';
+
+// Goldie, the ElevenLabs website voice, on every marketing page (Thomas, 2026-11-09).
+// One widget per page. goldie-voice.js gives her the connect_to_thomas tool (opens the dialer).
+function goldieWidget(ctx) {
+  const agentId = ctx.SITE.goldie && ctx.SITE.goldie.widget && ctx.SITE.goldie.widget.agentId;
+  if (!agentId) return '';
+  return `<elevenlabs-convai agent-id="${esc(agentId)}"></elevenlabs-convai>
+<script src="${GOLDIE_WIDGET_SRC}" async type="text/javascript"></script>
+<script src="${ctx.asset('goldie-voice.js')}" defer></script>`;
+}
+
 function scripts(ctx) {
   return `<script src="${ctx.root}assets/config.js?v=${encodeURIComponent(ctx.SITE.assetVersion)}"></script>
-<script type="module" src="${ctx.asset('site.js')}"></script>`;
+<script type="module" src="${ctx.asset('site.js')}"></script>
+${goldieWidget(ctx)}`;
 }
 
 export function renderPage(ctx, page) {

@@ -50,9 +50,7 @@ function goldie(ctx) {
   const widget = ctx.SITE.goldie && ctx.SITE.goldie.widget;
   const agentId = widget && widget.agentId;
   const talk = agentId
-    ? `<p>Tap to talk to Goldie, an AI receptionist built by Forever Gold AI. She can book a free call with Thomas.</p>
-  <elevenlabs-convai agent-id="${esc(agentId)}"></elevenlabs-convai>
-  <script src="https://unpkg.com/@elevenlabs/convai-widget-embed@0.20.0/dist/index.js" async type="text/javascript"></script>`
+    ? '<p>Tap to talk to Goldie, an AI receptionist built by Forever Gold AI. She can book a free call with Thomas. Her button sits at the bottom of every page on this site.</p>'
     : '<p>Goldie, our own AI receptionist, is coming to this page.</p>';
   return `<section id="talk-to-goldie" data-goldie-slot>
   <h2>Talk to Goldie</h2>
@@ -296,6 +294,8 @@ ${pageHead('Privacy', 'Privacy', 'What the forms collect, why we ask, and how te
   <p>We do not sell or share your mobile number or text-message consent with third parties or affiliates for marketing.</p>
   <h2>Ads and measurement</h2>
   <p>This site uses the Meta Pixel so we can see which Facebook and Instagram ads bring visitors and requests. It records page visits, and whether a form was sent or a call, text, or booking link was tapped. We do not add your form answers to what it sends. Meta may set cookies under its own data policy. You can limit ad tracking in your Facebook and Instagram ad settings or block cookies in your browser.</p>
+  <h2>Talking to Goldie</h2>
+  <p>Goldie is Forever Gold AI's AI voice assistant. She runs on ElevenLabs. If you tap her button and talk, your voice is processed and the conversation is recorded and transcribed so Thomas gets a summary. If you book a meeting, your name, email and phone number go to Thomas's calendar and email. Please do not share payment details or other sensitive information with her.</p>
   <h2>How to reach Thomas</h2>
   <p>Call or text <a href="${ctx.tel}">${esc(ctx.SITE.phone.display)}</a>. You can also use the contact form on this site.</p>
   <p><a href="${ctx.link('sms-terms')}">SMS terms</a></p>

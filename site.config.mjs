@@ -33,7 +33,7 @@ export const SITE = {
   bookingUrl: 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ3xvnaeAs43UTKKRuYL5yyKk6RuLX3h0M5D2bcwaaZA-kcI1yusbu_K1Ma-sMTZpktCR3QVDMaI',
   goldie: { widget: { agentId: 'agent_5801m626gmhgf3b9xajs3dz9e48b' } },
   analytics: { metaPixelId: '859617090012480' },
-  assetVersion: '20261102-v1',
+  assetVersion: '20261109-goldie',
   updated: '2026-11-02',
   year: 2026,
   smsBody: "Hi Thomas, I found Forever Gold AI online. I'd like to talk about my business.",
