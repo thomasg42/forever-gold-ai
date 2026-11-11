@@ -432,3 +432,33 @@ input:focus, select:focus, textarea:focus { border-color: var(--gold-500); outli
 .stats.mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .stats.mini .stat dd { font-size: 1.15rem; }
 @container (min-width: 380px) { .stats.mini { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---------- 2026-11-11: where people clicked ---------- */
+.stats.taps-more { margin-top: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stats.depth { margin-top: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 640px) { .stats.depth { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .stats.taps-more .stat dd { font-size: 1.1rem; } }
+.taps { margin-top: 10px; }
+.tap-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: tap; }
+.tap-row {
+  --share: 0%;
+  position: relative; overflow: hidden; counter-increment: tap;
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: "rank name count" "rank where count";
+  align-items: center; column-gap: 12px; padding: 12px 14px 14px;
+  border-radius: 12px; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.06); box-shadow: var(--edge), var(--lift);
+}
+.tap-row::before {
+  content: counter(tap); grid-area: rank; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 0.75rem; font-weight: 600; color: #140F02;
+  background: radial-gradient(circle at 35% 30%, #FFF1C2, var(--gold-500) 70%); box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.tap-name { grid-area: name; color: var(--ivory); font-weight: 600; min-width: 0; }
+.tap-where { grid-area: where; color: var(--silver-400); font-size: 0.85rem; min-width: 0; }
+.tap-count { grid-area: count; color: var(--gold-300); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.tap-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: var(--share); border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, var(--gold-600), var(--gold-300)); box-shadow: 0 0 8px rgba(212,165,55,0.45); }
+.tap-row.kind-call .tap-bar { background: linear-gradient(90deg, #3E8A57, var(--ok)); }
+.tap-row.kind-outbound .tap-bar { background: linear-gradient(90deg, #5d6168, var(--silver-200)); }
+.taps-all { margin-top: 10px; }
+.taps-all summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; color: var(--gold-300); font-weight: 600; }
+.taps-all .tap-list { margin-top: 8px; }

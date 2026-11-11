@@ -648,7 +648,7 @@ function waitingSite() {
       statBox('Started a form', syncMark(), 'Filled in, then left without submit'),
       statBox('Hit submit', syncMark(), 'The tap. It still has to reach the owner.'),
       statBox('Call button', syncMark(), 'A tap. This does not show whether the owner answered.')),
-    h('h3', { class: 'board-title' }, 'Top sections'),
+    h('h3', { class: 'board-title' }, 'Where people clicked'),
     h('p', { class: 'note sync-line' }, syncMark(), ' Syncing'),
     h('h3', { class: 'board-title' }, 'From the form'),
     h('p', { class: 'note sync-line' }, syncMark(), ' Syncing'),
@@ -693,12 +693,50 @@ function dialHref(phone) {
   return digits ? `tel:${digits}` : '';
 }
 
+// ---------- Where people clicked ----------
+const TAP_KIND = { click: 'Tap', call: 'Call', email: 'Email', text: 'Text', outbound: 'Outside link' };
+const pageName = (path) => (path === '/' ? 'Home' : path);
+
+function trackerNote(tracker) {
+  if (tracker?.version === 2) {
+    return h('p', { class: 'note' }, `Every button and link counted since ${tracker.since ? fmtDay(tracker.since) : 'the new counter started'}. Before that, only menu links, section links, tabs and Call taps were counted.`);
+  }
+  return h('p', { class: 'note' }, 'This site still runs the first counter: menu links, section links, tabs and Call taps. Every other button is counted once it gets the new counter.');
+}
+
+function tapRow(tap, most) {
+  const name = tap.kind === 'outbound' ? `${tap.spot || 'Link'} (${tap.label})` : (tap.label || 'Link');
+  const where = tap.opens ? `Opens ${pageName(tap.page)}` : [pageName(tap.page), tap.kind === 'outbound' ? '' : tap.spot].filter(Boolean).join(' · ');
+  const row = h('li', { class: `tap-row kind-${tap.kind}` },
+    h('span', { class: 'tap-name' }, name),
+    h('span', { class: 'tap-where' }, `${TAP_KIND[tap.kind] || 'Tap'} · ${where}`),
+    h('strong', { class: 'tap-count' }, count(tap.hits)),
+    h('span', { class: 'tap-bar', 'aria-hidden': 'true' }));
+  // A bar for size at a glance. Set through the style object, which the page's security policy allows.
+  const share = most ? Math.max(3, Math.round((tap.hits / most) * 100)) : 0;
+  if (row.style && typeof row.style.setProperty === 'function') row.style.setProperty('--share', `${share}%`);
+  return row;
+}
+
+function tapList(board) {
+  const taps = Array.isArray(board.taps) ? board.taps : [];
+  if (!taps.length) return h('p', { class: 'note' }, 'No taps in this range.');
+  const most = taps[0].hits || 1;
+  const top = taps.slice(0, 10);
+  return h('div', { class: 'taps' },
+    h('ol', { class: 'tap-list', 'aria-label': 'Most tapped' }, top.map((tap) => tapRow(tap, most))),
+    taps.length > top.length && h('details', { class: 'taps-all' },
+      h('summary', {}, `Show every tap (${count(board.tapsTotal || taps.length)})`),
+      h('ol', { class: 'tap-list' }, taps.map((tap) => tapRow(tap, most))),
+      (board.tapsTotal || 0) > taps.length && h('p', { class: 'note' }, `Showing the ${count(taps.length)} most tapped.`)));
+}
+
 function siteBoard(board) {
   const rangeNote = board.range?.key === 'all'
     ? 'Entire time starts the day counting began on this site. Earlier visits are not here.'
     : (board.range?.key === 'month' ? 'This calendar month, Denver time.' : '');
-  const top = Array.isArray(board.sections) ? board.sections.slice(0, 3) : [];
   const contacts = Array.isArray(board.contacts) ? board.contacts : [];
+  const full = board.tracker?.version === 2;
   return [
     rangeNote && h('p', { class: 'note' }, rangeNote),
     h('dl', { class: 'stats' },
@@ -706,12 +744,21 @@ function siteBoard(board) {
       statBox('Started a form', count(board.formStarts), 'Filled in, then left without submit'),
       statBox('Hit submit', count(board.forms), 'The tap. It still has to reach the owner.'),
       statBox('Call button', count(board.calls), 'A tap. This does not show whether the owner answered.')),
-    h('h3', { class: 'board-title' }, 'Top sections'),
-    top.length === 0
-      ? h('p', { class: 'note' }, 'No section clicks in this range.')
-      : h('ol', { class: 'ad-list' }, top.map((section) => h('li', { class: 'ad-card' },
-        h('h3', {}, section.label),
-        h('p', { class: 'note' }, `${count(section.clicks)} clicks`)))),
+    // Before the every-button counter, emails, texts and outside links were never counted: Unknown, not zero.
+    h('dl', { class: 'stats taps-more' },
+      statBox('Email taps', full ? count(board.emails || 0) : null, 'Opens their email app'),
+      statBox('Text taps', full ? count(board.texts || 0) : null, 'Opens their messages'),
+      statBox('Outside links', full ? count(board.outbound || 0) : null, 'Left for another site')),
+    h('h3', { class: 'board-title' }, 'Where people clicked'),
+    trackerNote(board.tracker),
+    tapList(board),
+    board.depth && h('h3', { class: 'board-title' }, 'How far people read'),
+    board.depth && h('dl', { class: 'stats depth' },
+      statBox('Saw a quarter', count(board.depth['25%'] || 0)),
+      statBox('Saw half', count(board.depth['50%'] || 0)),
+      statBox('Saw three quarters', count(board.depth['75%'] || 0)),
+      statBox('Reached the bottom', count(board.depth['100%'] || 0))),
+    board.depth && h('p', { class: 'note' }, 'Page views that got that far, counted since every-button counting began.'),
     h('h3', { class: 'board-title' }, 'From the form'),
     contacts.length === 0
       ? h('p', { class: 'note' }, 'No one has hit submit in this range.')
@@ -824,7 +871,6 @@ function dashboardView(slug, data) {
       }, 'Refresh'),
       h('button', { class: 'text-btn', type: 'button', onClick: signOut }, 'Sign out')));
 
-  // Reading order: who to call, your customers, what the ads brought, what the website did.
   const customers = h('section', { class: 'panel customers-panel', 'aria-labelledby': 'customers-title' },
     h('h2', { id: 'customers-title' }, 'Your customers'),
     statsBlock(summary),
@@ -855,12 +901,14 @@ function dashboardView(slug, data) {
       }),
       `Show ${testCount} test rows (team only, never counted)`),
     listArea);
+  // Reading order (Thomas, 2026-11-11): who to call, the live website numbers back on top where they were,
+  // then the ads, then the customer list.
   const page = h('div', { class: 'page wrap' },
     head,
     callNext(slug, data),
-    customers,
+    session && sitePanel(slug, session.token),
     session && adsPanel(slug, session.token, refreshList),
-    session && sitePanel(slug, session.token));
+    customers);
   refreshList();
   return page;
 }
