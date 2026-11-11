@@ -8,6 +8,11 @@ const API_BASE = 'https://forever-gold-crm.forevergoldai.workers.dev';
 const SESSION_KEY = 'fg_crm_session';
 const TIME_ZONE = 'America/Denver';
 const HELP_PHONE = '(406) 698-6693';
+// Live updates: an open dashboard checks for new customers and numbers on its own.
+// It never redraws while someone is typing, saving, or has touched the page in the last QUIET_MS,
+// and the lead and add-a-customer pages never redraw on their own at all.
+const LIVE_EVERY_MS = 60_000;
+const QUIET_MS = 20_000;
 
 class ApiError extends Error {
   constructor(status, code, message, data = {}) {
@@ -64,7 +69,13 @@ const state = {
   adsRange: 'launch',
   siteRange: '7d',
   siteCache: {},
+  adsCache: {},
   adNames: {},
+  lastTouch: 0,
+  saving: 0,
+  liveTimer: null,
+  teamData: null,
+  prints: {},
 };
 
 // Sessions: the token only, never customer data. A browser may refuse storage, so every touch is guarded.
@@ -106,7 +117,10 @@ function signOut() {
   clearSession();
   state.cache = {};
   state.siteCache = {};
+  state.adsCache = {};
   state.drafts = {};
+  state.teamData = null;
+  state.prints = {};
   go('#/');
 }
 
@@ -141,6 +155,12 @@ function show(...nodes) {
   if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
   if (typeof app.focus === 'function') app.focus({ preventScroll: true });
 }
+// A live redraw: same page, same scroll spot, and focus stays where the person left it.
+function showQuietly(...nodes) {
+  const y = typeof window.scrollY === 'number' ? window.scrollY : 0;
+  appEl().replaceChildren(...nodes.flat().filter(Boolean));
+  if (y && typeof window.scrollTo === 'function') window.scrollTo(0, y);
+}
 function go(hash) {
   if (location.hash === hash) route();
   else location.hash = hash;
@@ -150,6 +170,24 @@ const fmtMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', 
 function fmtWhen(ms) {
   if (ms === null || ms === undefined) return 'No date recorded';
   return new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ms));
+}
+function fmtClock(ms) {
+  return new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, hour: 'numeric', minute: '2-digit' }).format(new Date(ms));
+}
+// Speed to lead: how long an inquiry has sat with nobody recorded as contacting it.
+// It counts from when the inquiry came in, so it is only as right as the Contact column.
+function waitedFor(ms) {
+  const minutes = Math.max(0, Math.floor((Date.now() - ms) / 60000));
+  if (minutes < 1) return 'under 1 min';
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours} h`;
+  return `${Math.floor(hours / 24)} days`;
+}
+function waitTier(ms) {
+  const minutes = (Date.now() - ms) / 60000;
+  if (minutes < 5) return 'fresh';
+  return minutes < 60 ? 'warm' : 'late';
 }
 function fmtDay(text) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text || '');
@@ -295,7 +333,10 @@ async function renderSignIn(slug, ticket) {
         saveSession({ token: result.token, slug: result.slug, isTeam: result.isTeam, expiresAt: result.expiresAt }, keep);
         state.cache = {};
         state.siteCache = {};
+        state.adsCache = {};
         state.drafts = {};
+        state.teamData = null;
+        state.prints = {};
         if (!result.isTeam) requestSite(slug, result.token, state.siteRange);
         go(result.isTeam ? '#/team' : `#/b/${encodeURIComponent(slug)}`);
       } catch (error) {
@@ -319,21 +360,30 @@ async function renderSignIn(slug, ticket) {
 }
 
 // ---------- Dashboard ----------
-function statBox(label, value, note) {
+function statBox(label, value, note, extra) {
   const known = value !== null && value !== undefined;
   return h('div', { class: 'stat' },
     h('dt', {}, label),
     h('dd', { class: known ? null : 'unknown' }, known ? value : 'Unknown'),
-    note && h('small', {}, note));
+    note && h('small', {}, note),
+    extra || null);
+}
+
+// The share of inquiries that reached a step. Shown only when every inquiry has that step recorded,
+// because a blank is not a no and would make the rate look worse than it is.
+function stageRate(stage, inquiries) {
+  if (!inquiries || stage.key === 'inquiries' || stage.count === null || stage.notRecorded) return null;
+  return h('span', { class: 'rate' }, `${Math.round((stage.count / inquiries) * 100)}% of inquiries`);
 }
 
 function statsBlock(summary) {
   const notRecorded = (count) => (count ? `${count} not recorded` : null);
   const moneyNote = (item) => (item.recorded ? `from ${item.recorded} lead${item.recorded === 1 ? '' : 's'}` : 'none recorded yet');
   const money = (item) => (item.total === null ? null : fmtMoney(item.total));
+  const inquiries = summary.stages[0]?.count || 0;
   return [
-    h('dl', { class: 'stats', 'aria-label': 'Where your leads stand' },
-      summary.stages.map((stage) => statBox(stage.label, stage.count, notRecorded(stage.notRecorded)))),
+    h('dl', { class: 'stats funnel', 'aria-label': 'Where your leads stand' },
+      summary.stages.map((stage) => statBox(stage.label, stage.count, notRecorded(stage.notRecorded), stageRate(stage, inquiries)))),
     h('dl', { class: 'stats money', 'aria-label': 'Money recorded' },
       statBox('Potential money', money(summary.potential), summary.potential.recorded ? `on ${summary.potential.recorded} open lead${summary.potential.recorded === 1 ? '' : 's'}` : 'Add an amount on a lead'),
       statBox('Money collected', money(summary.collected), moneyNote(summary.collected)),
@@ -364,10 +414,51 @@ function filteredLeads(leads) {
   });
 }
 
+function waitPill(lead) {
+  if (lead.receivedAt === null || lead.receivedAt === undefined) return h('span', { class: 'pill todo' }, 'Needs follow-up');
+  return h('span', { class: `pill wait ${waitTier(lead.receivedAt)}`, 'data-since': String(lead.receivedAt) }, `Waiting ${waitedFor(lead.receivedAt)}`);
+}
+
+// Live ticks keep every waiting time current without redrawing the page.
+function refreshWaitTimes() {
+  for (const pill of document.querySelectorAll('.pill.wait[data-since]')) {
+    const since = Number(pill.getAttribute('data-since'));
+    pill.textContent = `Waiting ${waitedFor(since)}`;
+    pill.className = `pill wait ${waitTier(since)}`;
+  }
+  for (const slot of document.querySelectorAll('.wait-text[data-since]')) slot.textContent = waitedFor(Number(slot.getAttribute('data-since')));
+}
+
+// The one thing to do next: call whoever has waited longest. Nothing here is a guess; it reads the Contact column.
+function callNext(slug, data) {
+  const waiting = data.leads.filter(needsFollowUp);
+  if (!data.leads.some((lead) => !lead.isTest)) return null;
+  if (!waiting.length) {
+    return h('section', { class: 'next-up clear', 'aria-label': 'Who to call next' },
+      h('div', { class: 'next-copy' },
+        h('h2', {}, 'No one is waiting on a call'),
+        h('p', {}, 'Every inquiry on your records has a contact or booking recorded.')));
+  }
+  const dated = waiting.filter((lead) => lead.receivedAt !== null && lead.receivedAt !== undefined).sort((a, b) => a.receivedAt - b.receivedAt);
+  const first = dated[0] || waiting[0];
+  const name = first.name || 'No name recorded';
+  const tel = telHref(first.phone);
+  const n = waiting.length;
+  return h('section', { class: 'next-up', 'aria-label': 'Who to call next' },
+    h('div', { class: 'next-copy' },
+      h('h2', {}, `${count(n)} ${n === 1 ? 'person is' : 'people are'} waiting on a call`),
+      dated.length
+        ? h('p', {}, 'Longest wait: ', h('strong', {}, name), ', ', h('span', { class: 'wait-text', 'data-since': String(first.receivedAt) }, waitedFor(first.receivedAt)), '.')
+        : h('p', {}, 'Next up: ', h('strong', {}, name), '.')),
+    h('div', { class: 'next-actions' },
+      tel && h('a', { class: 'btn btn-gold', href: tel, 'aria-label': `Call ${name} at ${fmtPhone(first.phone)}` }, 'Call now'),
+      h('a', { class: 'btn', href: `#/b/${encodeURIComponent(slug)}/lead/${encodeURIComponent(first.key)}` }, 'Open')));
+}
+
 function leadCard(slug, lead, labels, onContacted = () => {}) {
   const pills = [
     lead.isTest && h('span', { class: 'pill test' }, 'Test'),
-    needsFollowUp(lead) && h('span', { class: 'pill todo' }, 'Needs follow-up'),
+    needsFollowUp(lead) && waitPill(lead),
     lead.contactStatus && h('span', { class: 'pill' }, lead.contactStatus),
     lead.bookingStatus && h('span', { class: 'pill' }, lead.bookingStatus),
     lead.jobStatus && h('span', { class: 'pill' }, `Job: ${lead.jobStatus}`),
@@ -392,6 +483,7 @@ function leadCard(slug, lead, labels, onContacted = () => {}) {
 async function saveContacted(slug, data, lead, box) {
   const session = getSession();
   box.disabled = true;
+  state.saving += 1;
   try {
     const result = await api().update({ business: slug, key: lead.key, changes: { contactStatus: box.checked ? 'Reached' : '' }, expectedUpdatedAt: lead.crmUpdatedAt }, session.token);
     const index = data.leads.findIndex((item) => item.key === lead.key);
@@ -405,6 +497,8 @@ async function saveContacted(slug, data, lead, box) {
     box.disabled = false;
     const card = box.closest('.lead');
     if (card) card.append(h('p', { class: 'message', role: 'alert' }, error.message));
+  } finally {
+    state.saving -= 1;
   }
 }
 
@@ -440,11 +534,35 @@ function adCard(ad) {
       h('div', {}, h('dt', {}, 'Collected'), h('dd', {}, moneyOr(ad.collected, 'Unknown')))));
 }
 
+// The whole story in one line: dollars in, customers, dollars back. Meta knows the first two links,
+// only the owner's records know the rest, so an unrecorded link says Unknown instead of zero.
+function moneyChain(board) {
+  const { totals, forms, funnel } = board;
+  const known = (value, show) => (value === null || value === undefined ? 'Unknown' : show(value));
+  const links = [
+    ['Ad spend', fmtMoney(totals.spend), 'meta'],
+    ['Link clicks', count(totals.linkClicks), 'meta'],
+    ['Inquiries from ads', count(forms.fromAds), 'records'],
+    ['Booked', known(funnel.booked, count), 'records'],
+    ['Paying', known(funnel.paid, count), 'records'],
+    ['Collected', known(board.collected, fmtMoney), 'records'],
+  ];
+  return h('div', { class: 'chain-wrap' },
+    h('ol', { class: 'chain', 'aria-label': 'From ad dollars to money collected' },
+      links.map(([label, value, from]) => h('li', { class: `chain-link ${from}${value === 'Unknown' ? ' unknown' : ''}` },
+        h('span', { class: 'chain-label' }, label),
+        h('strong', { class: 'chain-value' }, value)))),
+    h('p', { class: 'chain-verdict' }, board.backPerDollar === null || board.backPerDollar === undefined
+      ? 'Money back per $1 shows once a payment is recorded on a lead from an ad.'
+      : `${fmtMoney(board.backPerDollar)} back for every $1 of ads.`));
+}
+
 function adsBoard(board) {
   const { totals, forms, funnel, costs } = board;
   const fromYourRecords = funnel.notRecorded ? `${funnel.notRecorded} not recorded` : null;
   return [
     (board.alerts || []).length > 0 && h('ul', { class: 'alerts', 'aria-label': 'Alerts' }, board.alerts.map((alert) => h('li', { class: 'message' }, alert.text))),
+    moneyChain(board),
     h('h3', { class: 'board-title' }, 'From Meta'),
     h('dl', { class: 'stats' },
       statBox('Ad spend', fmtMoney(totals.spend)),
@@ -455,7 +573,7 @@ function adsBoard(board) {
       statBox('Call button taps', count(totals.callTaps), 'A tap, not a finished call')),
     h('h3', { class: 'board-title' }, 'From your records'),
     h('dl', { class: 'stats' },
-      statBox('Inquiries', count(forms.total), `${count(forms.fromAds)} from ads, ${count(forms.otherSource)} other${forms.addedByHand ? `, ${count(forms.addedByHand)} added by hand` : ''}`),
+      statBox('Inquiries in these dates', count(forms.total), `${count(forms.fromAds)} from ads, ${count(forms.otherSource)} other${forms.addedByHand ? `, ${count(forms.addedByHand)} added by hand` : ''}`),
       statBox('Cost per ad inquiry', moneyOr(costs.perForm, 'None yet')),
       statBox('Booked from ads', funnel.booked === null ? null : count(funnel.booked), fromYourRecords),
       statBox('Paying from ads', funnel.paid === null ? null : count(funnel.paid), fromYourRecords),
@@ -473,21 +591,20 @@ function adsPanel(slug, token, onNames) {
   const body = h('div', { 'aria-live': 'polite' });
   const panel = h('section', { class: 'ads-panel', 'aria-labelledby': 'ads-title' }, h('h2', { id: 'ads-title' }, 'Your ads'));
   const chips = h('div', { class: 'filters', role: 'group', 'aria-label': 'Which dates to show' });
-  const load = async () => {
+  // fresh: a person asked (tapped a range), so Meta is asked again. Otherwise a board under half a live tick old is reused.
+  const load = async (fresh) => {
     chips.replaceChildren(...AD_RANGES.map(([id, label]) => h('button', {
       class: 'chip',
       type: 'button',
       'aria-pressed': String(state.adsRange === id),
       onClick: () => {
         state.adsRange = id;
-        load();
+        load(true);
       },
     }, label)));
-    body.replaceChildren(h('p', { class: 'note' }, 'Loading your ad numbers...'));
     const asked = state.adsRange;
-    try {
-      const board = await api().ads(slug, asked, token);
-      if (asked !== state.adsRange) return;
+    const key = `${slug}:${asked}`;
+    const paint = (board) => {
       if (!board.connected) {
         panel.replaceChildren(panel.firstChild, h('p', { class: 'note' }, 'Ad numbers are not connected yet. This does not mean your ads have no results.'));
         return;
@@ -495,13 +612,24 @@ function adsPanel(slug, token, onNames) {
       for (const ad of board.ads) state.adNames[ad.adId] = ad.name;
       onNames();
       body.replaceChildren(...adsBoard(board).filter(Boolean));
+    };
+    // A live redraw paints the board it just fetched instead of flashing a loading line.
+    const cached = state.adsCache[key];
+    if (cached) paint(cached.board);
+    else body.replaceChildren(h('p', { class: 'note' }, 'Loading your ad numbers...'));
+    if (!fresh && cached && Date.now() - cached.at < LIVE_EVERY_MS / 2) return;
+    try {
+      const board = await api().ads(slug, asked, token);
+      if (asked !== state.adsRange) return;
+      state.adsCache[key] = { board, at: Date.now() };
+      paint(board);
     } catch (error) {
       if (asked !== state.adsRange) return;
       body.replaceChildren(h('p', { class: 'message', role: 'alert' }, error.message));
     }
   };
   panel.append(chips, body);
-  load();
+  load(false);
   return panel;
 }
 
@@ -529,6 +657,12 @@ function waitingSite() {
 
 function siteKey(slug, range) {
   return `${slug}:${range}`;
+}
+
+function clearAds(slug) {
+  for (const key of Object.keys(state.adsCache)) {
+    if (key.startsWith(`${slug}:`)) delete state.adsCache[key];
+  }
 }
 
 function clearSite(slug) {
@@ -673,7 +807,8 @@ function dashboardView(slug, data) {
   const head = h('div', { class: 'page-head' },
     h('div', {},
       h('h1', {}, data.business.name),
-      h('p', { class: 'fetched' }, data.fetchedAt ? `Updated ${fmtWhen(Date.parse(data.fetchedAt))}` : '')),
+      h('p', { class: 'fetched' }, data.fetchedAt ? `Updated ${fmtWhen(Date.parse(data.fetchedAt))}` : ''),
+      livePill(data.fetchedAt)),
     h('div', { class: 'page-tools' },
       h('a', { class: 'btn btn-gold', href: `#/b/${encodeURIComponent(slug)}/add` }, 'Add a customer'),
       session?.isTeam && h('a', { class: 'btn', href: '#/team' }, 'All businesses'),
@@ -683,16 +818,15 @@ function dashboardView(slug, data) {
         onClick: () => {
           delete state.cache[slug];
           clearSite(slug);
+          clearAds(slug);
           route();
         },
       }, 'Refresh'),
       h('button', { class: 'text-btn', type: 'button', onClick: signOut }, 'Sign out')));
 
-  const page = h('div', { class: 'page wrap' },
-    head,
-    session && sitePanel(slug, session.token),
-    session && adsPanel(slug, session.token, refreshList),
-    h('h2', { class: 'section-title' }, 'Your customers'),
+  // Reading order: who to call, your customers, what the ads brought, what the website did.
+  const customers = h('section', { class: 'panel customers-panel', 'aria-labelledby': 'customers-title' },
+    h('h2', { id: 'customers-title' }, 'Your customers'),
     statsBlock(summary),
     h('p', { class: 'note' }, 'Unknown means nobody has recorded it yet. It does not mean zero.'),
     h('div', { class: 'filters', role: 'group', 'aria-label': 'Which leads to show' }, chips),
@@ -721,8 +855,24 @@ function dashboardView(slug, data) {
       }),
       `Show ${testCount} test rows (team only, never counted)`),
     listArea);
+  const page = h('div', { class: 'page wrap' },
+    head,
+    callNext(slug, data),
+    customers,
+    session && adsPanel(slug, session.token, refreshList),
+    session && sitePanel(slug, session.token));
   refreshList();
   return page;
+}
+
+// Says the page keeps itself current. The dot is still on purpose: this is the working tool.
+function livePill(fetchedAt) {
+  const when = Date.parse(fetchedAt || '');
+  // Not a live region: its stamp changes every minute and a screen reader would announce each one.
+  return h('p', { class: 'live' },
+    h('span', { class: 'live-dot', 'aria-hidden': 'true' }),
+    h('span', {}, 'Live'),
+    h('span', { class: 'live-when' }, Number.isNaN(when) ? ' checks every minute' : ` checked ${fmtClock(when)}, checks every minute`));
 }
 
 function notConnectedView(data) {
@@ -730,7 +880,7 @@ function notConnectedView(data) {
   const slug = data.business.slug;
   return h('div', { class: 'page wrap' },
     h('div', { class: 'page-head' },
-      h('h1', {}, data.business.name),
+      h('div', {}, h('h1', {}, data.business.name), livePill(data.fetchedAt)),
       h('div', { class: 'page-tools' },
         h('button', {
           class: 'btn',
@@ -738,6 +888,7 @@ function notConnectedView(data) {
           onClick: () => {
             delete state.cache[slug];
             clearSite(slug);
+            clearAds(slug);
             route();
           },
         }, 'Refresh'),
@@ -1019,7 +1170,103 @@ async function renderAdd(slug, ticket) {
     form));
 }
 
-// ---------- Team overview ----------
+// ---------- Team overview: the owner's view of every business ----------
+const sumKnown = (values) => {
+  const known = values.filter((value) => value !== null && value !== undefined);
+  return known.length ? known.reduce((total, value) => total + value, 0) : null;
+};
+const countOrNull = (value) => (value === null || value === undefined ? null : count(value));
+const moneyOrNull = (value) => (value === null || value === undefined ? null : fmtMoney(value));
+const stageOf = (summary, key) => summary?.stages?.find((stage) => stage.key === key)?.count ?? null;
+
+function ownerTotals(businesses) {
+  const summaries = businesses.map((business) => business.summary).filter(Boolean);
+  const sites = businesses.map((business) => business.website).filter((site) => site?.collecting && site?.seen);
+  return [
+    h('dl', { class: 'stats owner-totals', 'aria-label': 'Every business together' },
+      statBox('Inquiries', summaries.length ? countOrNull(sumKnown(summaries.map((summary) => summary.total))) : null),
+      statBox('Waiting on a call', summaries.length ? countOrNull(sumKnown(summaries.map((summary) => summary.needsFollowUp))) : null),
+      statBox('Booked', countOrNull(sumKnown(summaries.map((summary) => stageOf(summary, 'booked'))))),
+      statBox('Paid', countOrNull(sumKnown(summaries.map((summary) => stageOf(summary, 'paid'))))),
+      statBox('Money collected', moneyOrNull(sumKnown(summaries.map((summary) => summary.collected?.total)))),
+      statBox('Website visitors', sites.length ? countOrNull(sumKnown(sites.map((site) => site.people))) : null, sites.length ? `last 7 days, ${sites.length} site${sites.length === 1 ? '' : 's'}` : 'No site counted yet')),
+    h('p', { class: 'note' }, `Customer numbers come from ${summaries.length} of ${businesses.length} businesses with records connected. Unknown means nobody has recorded it yet.`),
+  ];
+}
+
+function miniStats(summary) {
+  return h('dl', { class: 'stats mini', 'aria-label': 'At a glance' },
+    statBox('Inquiries', countOrNull(summary.total)),
+    statBox('Waiting on a call', countOrNull(summary.needsFollowUp)),
+    statBox('Booked', countOrNull(stageOf(summary, 'booked'))),
+    statBox('Paid', countOrNull(stageOf(summary, 'paid'))),
+    statBox('Collected', moneyOrNull(summary.collected?.total)));
+}
+
+// Plug and play, made visible: what each business still needs before every number on its board is live.
+const SETUP_STEPS = [
+  ['records', 'Customer records', 'Connected', 'Not connected'],
+  ['pinSet', 'Client PIN', 'Set', 'Not set'],
+  ['website', 'Website on the CRM', 'Listed', 'Not listed'],
+  ['websiteSeen', 'Website tracker', 'Counting', 'No visit yet'],
+  ['adAccount', 'Meta ad account', 'Added', 'Not added'],
+  ['adTokenSet', 'Meta read token', 'Set', 'Not set'],
+];
+
+function setupCard(setup) {
+  const done = SETUP_STEPS.filter(([key]) => setup[key]).length;
+  return h('details', { class: 'setup' },
+    h('summary', {},
+      h('span', { class: 'setup-meter', 'aria-hidden': 'true' }, SETUP_STEPS.map(([key]) => h('span', { class: setup[key] ? 'seg on' : 'seg' }))),
+      h('span', {}, `Setup ${done} of ${SETUP_STEPS.length}`)),
+    h('ul', { class: 'setup-list' }, SETUP_STEPS.map(([key, label, yes, no]) => h('li', { class: setup[key] ? 'on' : 'off' },
+      h('span', {}, label),
+      h('strong', {}, setup[key] ? yes : no)))),
+    h('p', { class: 'note' }, 'Set means it is configured, not that it has been proven to work. The board itself proves that.'),
+    setup.joinedFrom === 'command-center' && h('p', { class: 'note' }, 'Joined on its own from the Command Center registry.'));
+}
+
+function statusChip(business) {
+  if (business.error) return h('span', { class: 'status bad' }, 'Records error');
+  if (business.summary) return h('span', { class: 'status good' }, 'Records live');
+  return h('span', { class: 'status' }, business.website?.collecting ? 'Website only' : 'Not set up');
+}
+
+function teamCard(business) {
+  const href = `#/b/${encodeURIComponent(business.slug)}`;
+  const line = websiteLine(business.website);
+  return h('li', { class: 'team-card' },
+    h('div', { class: 'team-card-head' }, h('h2', {}, h('a', { href }, business.name)), statusChip(business)),
+    business.summary
+      ? miniStats(business.summary)
+      : h('p', { class: business.error ? 'message' : 'note' }, business.error ? business.message : 'Records not connected yet.'),
+    line ? h('p', { class: 'note' }, line) : null,
+    business.setup ? setupCard(business.setup) : null,
+    h('a', { class: 'btn open-business', href, 'aria-label': `Open ${business.name}` }, 'Open'));
+}
+
+// Attention first: a broken sheet, then whoever has the most people waiting on a call, then the rest as listed.
+function attentionOrder(businesses) {
+  const weight = (business) => (business.error ? 1e6 : 0) + (business.summary?.needsFollowUp || 0) * 10 + (business.summary ? 1 : 0);
+  return businesses.map((business, index) => ({ business, index }))
+    .sort((a, b) => weight(b.business) - weight(a.business) || a.index - b.index)
+    .map(({ business }) => business);
+}
+
+function teamView(data) {
+  return h('div', { class: 'page wrap' },
+    h('div', { class: 'page-head' },
+      h('div', {},
+        h('h1', {}, 'All businesses'),
+        h('p', { class: 'fetched' }, `Updated ${fmtWhen(Date.parse(data.fetchedAt))}`),
+        livePill(data.fetchedAt)),
+      h('div', { class: 'page-tools' },
+        h('button', { class: 'btn', type: 'button', onClick: () => route() }, 'Refresh'),
+        h('button', { class: 'text-btn', type: 'button', onClick: signOut }, 'Sign out'))),
+    h('section', { class: 'owner-board', 'aria-label': 'Every business together' }, ownerTotals(data.businesses)),
+    h('ul', { class: 'team-grid' }, attentionOrder(data.businesses).map(teamCard)));
+}
+
 async function renderTeam(ticket) {
   const session = getSession();
   if (!session?.isTeam) {
@@ -1031,22 +1278,105 @@ async function renderTeam(ticket) {
   try {
     const data = await api().overview(session.token);
     if (ticket !== state.ticket) return;
-    for (const business of data.businesses) requestSite(business.slug, session.token, '7d');
-    const line = (business) => websiteLine(business.website);
-    show(h('div', { class: 'page wrap' },
-      h('div', { class: 'page-head' },
-        h('div', {}, h('h1', {}, 'All businesses'), h('p', { class: 'fetched' }, `Updated ${fmtWhen(Date.parse(data.fetchedAt))}`)),
-        h('div', { class: 'page-tools' }, h('button', { class: 'text-btn', type: 'button', onClick: signOut }, 'Sign out'))),
-      h('ul', { class: 'team-grid' }, data.businesses.map((business) => h('li', { class: 'team-card' },
-        h('h2', {}, h('a', { href: `#/b/${encodeURIComponent(business.slug)}` }, business.name)),
-        business.summary
-          ? statsBlock(business.summary)
-          : h('p', { class: business.error ? 'message' : 'note' }, business.error ? business.message : 'Records not connected yet.'),
-        line(business) ? h('p', { class: 'note' }, line(business)) : null)))));
+    for (const business of data.businesses) requestSite(business.slug, session.token, '7d').catch(() => null);
+    state.teamData = data;
+    state.prints.team = printOf(data.businesses);
+    show(teamView(data));
   } catch (error) {
     if (ticket !== state.ticket) return;
     if (!handleSignedOut(error, state.teamSlug)) show(errorBox(error, route));
   }
+}
+
+// ---------- Live updates ----------
+// fetchedAt changes on every read, so it is left out when deciding whether anything really changed.
+const printOf = (value) => JSON.stringify(value === undefined ? null : value, (key, inner) => (key === 'fetchedAt' ? undefined : inner));
+
+function currentParts() {
+  return (location.hash || '').replace(/^#\/?/, '').split('/').map((part) => {
+    try {
+      return decodeURIComponent(part);
+    } catch {
+      return '';
+    }
+  });
+}
+
+function stampLive(fetchedAt) {
+  const when = Date.parse(fetchedAt || '') || Date.now();
+  for (const slot of document.querySelectorAll('.live-when')) slot.textContent = ` checked ${fmtClock(when)}, checks every minute`;
+}
+
+// Someone is mid-task: saving, typing, or touched the page moments ago. A live redraw waits for the next tick.
+function busy(ignoreQuiet) {
+  if (state.saving > 0) return true;
+  if (!ignoreQuiet && Date.now() - state.lastTouch < QUIET_MS) return true;
+  const active = document.activeElement;
+  return Boolean(active && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName || ''));
+}
+
+// Exported for the smoke test, which passes ignoreQuiet because its own clicks count as touches.
+export async function liveTick(ignoreQuiet = false) {
+  if (document.visibilityState === 'hidden' || busy(ignoreQuiet)) return;
+  const session = getSession();
+  if (!session) return;
+  const parts = currentParts();
+  const ticket = state.ticket;
+  try {
+    if (parts[0] === 'team' && parts.length === 1 && session.isTeam) {
+      const data = await api().overview(session.token);
+      if (ticket !== state.ticket || busy(ignoreQuiet)) return;
+      const print = printOf(data.businesses);
+      if (print === state.prints.team) {
+        stampLive(data.fetchedAt);
+        return;
+      }
+      state.teamData = data;
+      state.prints.team = print;
+      showQuietly(teamView(data));
+      return;
+    }
+    // Only the business page. The lead page and Add a customer never redraw on their own.
+    if (parts[0] !== 'b' || !parts[1] || parts.length !== 2 || !(session.isTeam || session.slug === parts[1])) return;
+    const slug = parts[1];
+    const before = state.cache[slug];
+    if (!before) return;
+    const [data, site, ads] = await Promise.all([
+      api().leads(slug, session.token),
+      typeof api().site === 'function' ? requestSite(slug, session.token, state.siteRange, true).catch(() => null) : null,
+      before.connected && typeof api().ads === 'function' ? api().ads(slug, state.adsRange, session.token).catch(() => null) : null,
+    ]);
+    if (ticket !== state.ticket || busy(ignoreQuiet)) return;
+    if (ads) state.adsCache[`${slug}:${state.adsRange}`] = { board: ads, at: Date.now() };
+    const key = `b:${slug}`;
+    const boards = printOf([site, ads]);
+    const leadsChanged = printOf([data.leads, data.summary, data.connected]) !== printOf([before.leads, before.summary, before.connected]);
+    const boardsChanged = state.prints[key] !== undefined && state.prints[key] !== boards;
+    state.prints[key] = boards;
+    if (!leadsChanged && !boardsChanged) {
+      stampLive(data.fetchedAt);
+      refreshWaitTimes();
+      return;
+    }
+    state.cache[slug] = data;
+    showQuietly(data.connected ? dashboardView(slug, data) : notConnectedView(data));
+  } catch (error) {
+    // A missed tick shows nothing; the next one tries again. A signed-out session goes back to its sign-in.
+    if (ticket === state.ticket && error?.status === 401) handleSignedOut(error, parts[0] === 'team' ? state.teamSlug : parts[1]);
+  }
+}
+
+function startLive() {
+  if (state.liveTimer || typeof setInterval !== 'function') return;
+  const touch = () => {
+    state.lastTouch = Date.now();
+  };
+  for (const type of ['pointerdown', 'keydown', 'input', 'wheel', 'touchstart']) document.addEventListener(type, touch, { capture: true, passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') liveTick();
+  });
+  state.liveTimer = setInterval(() => liveTick(), LIVE_EVERY_MS);
+  if (typeof state.liveTimer?.unref === 'function') state.liveTimer.unref();
 }
 
 // ---------- Routes ----------
@@ -1058,13 +1388,7 @@ export async function route() {
   }
   state.ticket += 1;
   const ticket = state.ticket;
-  const parts = (location.hash || '').replace(/^#\/?/, '').split('/').map((part) => {
-    try {
-      return decodeURIComponent(part);
-    } catch {
-      return '';
-    }
-  });
+  const parts = currentParts();
   if (parts[0] === 'sign-in' && parts[1]) return renderSignIn(parts[1], ticket);
   if (parts[0] === 'team') return renderTeam(ticket);
   if (parts[0] === 'b' && parts[1] && parts[2] === 'lead' && parts[3]) return renderLead(parts[1], parts[3], ticket);
@@ -1079,3 +1403,4 @@ if (window.CRM_DEMO) {
 }
 window.addEventListener('hashchange', route);
 route();
+startLive();

@@ -216,3 +216,219 @@ input[type="checkbox"] { display: inline-block; width: 24px; min-height: 24px; h
 .lead > .message { flex-basis: 100%; margin: 0 12px 12px; }
 .alerts { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .alerts .message { margin: 0; }
+
+/* ===== Premium skin, 2026-11-11. Depth instead of flat boxes: layered shadows, a top light edge,
+   a gold rim on the things that matter. All depth is static. The only motion stays the picker's journey
+   section above; nothing moves between a person and a save. ===== */
+:root {
+  --surface-1: linear-gradient(180deg, #1C1C20 0%, #141417 100%);
+  --surface-2: linear-gradient(180deg, #212126 0%, #17171B 100%);
+  --edge: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.5);
+  --lift: 0 1px 1px rgba(0,0,0,0.4), 0 6px 14px -6px rgba(0,0,0,0.7), 0 18px 36px -18px rgba(0,0,0,0.8);
+  --lift-gold: 0 0 0 1px rgba(212,165,55,0.35), 0 10px 28px -10px rgba(212,165,55,0.35), 0 22px 44px -22px rgba(0,0,0,0.9);
+  --radius: 14px;
+}
+body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(212,165,55,0.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(169,174,181,0.06), transparent 60%),
+    var(--black-950);
+  background-attachment: fixed;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+.top {
+  background: rgba(14,14,16,0.82);
+  -webkit-backdrop-filter: saturate(140%) blur(14px); backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid rgba(212,165,55,0.18);
+  box-shadow: 0 8px 24px -16px rgba(0,0,0,0.9);
+}
+.brand img { filter: drop-shadow(0 4px 10px rgba(212,165,55,0.35)); }
+.call-now, .btn-gold {
+  background: linear-gradient(180deg, var(--gold-300) 0%, var(--gold-500) 55%, var(--gold-600) 100%);
+  border: 0; color: #140F02;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -2px 0 rgba(0,0,0,0.18), 0 6px 16px -6px rgba(212,165,55,0.6);
+}
+.btn { border-radius: 12px; border-color: rgba(212,165,55,0.45); background: var(--surface-2); box-shadow: var(--edge), var(--lift); }
+.btn:hover { border-color: var(--gold-300); }
+.btn:active, .call-now:active { transform: translateY(1px); }
+input, select, textarea {
+  background: #0F0F12; border: 1px solid #34343A; border-radius: 12px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+}
+input:focus, select:focus, textarea:focus { border-color: var(--gold-500); outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 0 0 3px rgba(212,165,55,0.25); }
+
+/* Panels, stats and cards all sit on one depth system */
+.panel, .ads-panel, .site-panel, .team-card, .stat, .lead, .ad-card, .pick {
+  background: var(--surface-1);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius);
+  box-shadow: var(--edge), var(--lift);
+}
+.ads-panel, .site-panel, .panel { padding: 20px; }
+.ads-panel h2, .site-panel h2, .panel h2, .team-card h2 { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; letter-spacing: 0.01em; }
+.ads-panel h2::before, .site-panel h2::before, .panel h2::before, .team-card h2::before {
+  content: ""; width: 26px; height: 26px; flex: none; border-radius: 8px;
+  background: radial-gradient(circle at 30% 25%, #FFF1C2 0%, var(--gold-300) 25%, var(--gold-500) 60%, #7A5615 100%);
+  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.35), 0 4px 10px -3px rgba(212,165,55,0.55);
+  transform: perspective(60px) rotateX(12deg) rotateY(-12deg);
+}
+
+/* The number tiles: the most important reading on the page, so they get the most depth */
+.stats { gap: 12px; }
+.stat { position: relative; overflow: hidden; padding: 14px 16px 16px; }
+.stat::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(243,210,122,0.55), transparent); }
+.stat dt { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; font-weight: 600; }
+.stat dd { font-size: 1.85rem; line-height: 1.15; margin-top: 6px; letter-spacing: -0.01em; }
+.stats.money .stat { box-shadow: var(--edge), var(--lift-gold); }
+.stats.money .stat dd { background: linear-gradient(180deg, #FFF3CF, var(--gold-300) 60%, var(--gold-500)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stats.money .stat dd.unknown { background: none; color: var(--silver-400); }
+
+/* Leads: easy scan, one row per person */
+.leads { gap: 10px; }
+.lead { overflow: hidden; }
+.lead-main { padding: 14px 16px; }
+.lead-name { font-size: 1.1rem; }
+.lead-call, .lead-contacted { border-left-color: rgba(255,255,255,0.06); }
+.lead-call { background: linear-gradient(180deg, rgba(212,165,55,0.14), rgba(212,165,55,0.04)); }
+.pill { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.10); padding: 3px 10px; font-weight: 600; }
+.pill.todo { background: rgba(212,165,55,0.12); }
+.chip { background: var(--surface-2); border-color: rgba(255,255,255,0.08); box-shadow: var(--edge); }
+.chip[aria-pressed="true"] { background: linear-gradient(180deg, var(--gold-300), var(--gold-500)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 6px 14px -6px rgba(212,165,55,0.55); }
+
+/* Picker: 3D tiles a prospect sees first */
+.hero h1 { background: linear-gradient(180deg, #FFFDF6, var(--ivory) 55%, #CDBF9C); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pick { min-height: 96px; padding: 18px 20px; border-color: rgba(212,165,55,0.28); }
+.pick::before {
+  content: ""; width: 40px; height: 40px; flex: none; margin-right: 4px; border-radius: 12px;
+  background: radial-gradient(circle at 30% 25%, #FFF1C2 0%, var(--gold-300) 25%, var(--gold-500) 60%, #6F4E12 100%);
+  box-shadow: inset 0 -4px 7px rgba(0,0,0,0.35), 0 8px 16px -6px rgba(212,165,55,0.6);
+  transform: perspective(80px) rotateX(14deg) rotateY(-14deg);
+}
+.pick span:first-of-type { flex: 1; }
+.pick:hover { border-color: var(--gold-300); box-shadow: var(--edge), var(--lift-gold); }
+.ad-facts dd { font-size: 1.05rem; }
+.message { border-radius: 12px; background: rgba(255,180,168,0.06); }
+.message.good { background: rgba(168,230,184,0.06); }
+.empty { border-radius: var(--radius); background: rgba(255,255,255,0.02); }
+.demo-banner { background: linear-gradient(90deg, var(--gold-500), var(--gold-300), var(--gold-500)); }
+
+/* ---------- 2026-11-11: live, speed to lead, money chain, owner board ---------- */
+
+/* Each kind of panel gets its own gold object, so sections are told apart at a glance. */
+.site-panel h2::before { border-radius: 50%; transform: none; background: radial-gradient(circle at 32% 28%, #FFF6D6 0%, var(--gold-300) 22%, var(--gold-500) 58%, #5E420F 100%); }
+.ads-panel h2::before { border-radius: 7px; transform: perspective(60px) rotateX(18deg) rotateY(-22deg); }
+.customers-panel h2::before { border-radius: 50% 50% 12px 12px; transform: none; }
+.next-up h2::before, .team-card h2::before { display: none; }
+
+/* Live: a still dot, never a pulse. This is the working tool. */
+.live { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; padding: 4px 12px 4px 10px; border-radius: 999px;
+  background: rgba(168,230,184,0.07); border: 1px solid rgba(168,230,184,0.25); color: var(--ok); font-size: 0.85rem; font-weight: 600; }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #E9FFF0, var(--ok) 55%, #3E8A57);
+  box-shadow: 0 0 0 3px rgba(168,230,184,0.15), 0 0 10px rgba(168,230,184,0.55); flex: none; }
+.live-when { color: var(--silver-400); font-weight: 400; }
+
+/* Speed to lead */
+.pill.wait { font-variant-numeric: tabular-nums; }
+.pill.wait.fresh { border-color: rgba(168,230,184,0.55); color: var(--ok); background: rgba(168,230,184,0.08); }
+.pill.wait.warm { border-color: var(--gold-500); color: var(--gold-300); background: rgba(212,165,55,0.12); }
+.pill.wait.late { border-color: var(--alert); color: var(--alert); background: rgba(255,180,168,0.08); }
+.next-up {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px;
+  margin-top: 20px; padding: 18px 20px 18px 76px; position: relative;
+  border-radius: var(--radius); border: 1px solid rgba(212,165,55,0.45);
+  background: linear-gradient(135deg, rgba(212,165,55,0.16), rgba(212,165,55,0.03) 55%), var(--surface-1);
+  box-shadow: var(--edge), var(--lift-gold);
+}
+.next-up::before {
+  content: ""; position: absolute; left: 20px; top: 50%; width: 40px; height: 40px; margin-top: -20px; border-radius: 12px;
+  background: radial-gradient(circle at 30% 25%, #FFF1C2 0%, var(--gold-300) 25%, var(--gold-500) 60%, #6F4E12 100%);
+  box-shadow: inset 0 -4px 7px rgba(0,0,0,0.35), 0 8px 16px -6px rgba(212,165,55,0.6);
+  transform: perspective(80px) rotateX(14deg) rotateY(-14deg);
+}
+.next-up.clear { border-color: rgba(168,230,184,0.35); background: linear-gradient(135deg, rgba(168,230,184,0.10), transparent 55%), var(--surface-1); box-shadow: var(--edge), var(--lift); }
+.next-up.clear::before { background: radial-gradient(circle at 30% 25%, #F1FFF5 0%, var(--ok) 40%, #3E8A57 100%); box-shadow: inset 0 -4px 7px rgba(0,0,0,0.3), 0 8px 16px -6px rgba(168,230,184,0.5); }
+.next-copy { min-width: 0; flex: 1 1 260px; }
+.next-copy h2 { font-size: 1.2rem; }
+.next-copy p { margin-top: 4px; color: var(--silver-200); }
+.next-copy strong { color: var(--ivory); }
+.next-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 420px) { .next-up { padding-left: 20px; padding-top: 72px; } .next-up::before { top: 18px; margin-top: 0; } }
+
+/* Funnel: numbered steps, read left to right (or top to bottom on a phone). */
+.stats.funnel { counter-reset: step; }
+.stats.funnel .stat { counter-increment: step; padding-top: 30px; }
+.stats.funnel .stat::before {
+  content: counter(step); position: absolute; top: 9px; right: 10px; width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 0.7rem; font-weight: 600; color: #140F02;
+  background: radial-gradient(circle at 35% 30%, #FFF1C2, var(--gold-500) 70%); box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.rate { display: block; margin-top: 4px; font-size: 0.8rem; font-weight: 600; color: var(--gold-300); }
+.customers-panel { margin-top: 20px; }
+.customers-panel .stats { margin-top: 16px; }
+
+/* Money chain: dollars in, customers, dollars back */
+.chain-wrap { margin-top: 14px; }
+.chain { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 640px) { .chain { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .chain { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; } }
+.chain-link {
+  position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 16px;
+  border-radius: 12px; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.07); box-shadow: var(--edge), var(--lift);
+}
+.chain-link.meta { border-top: 2px solid rgba(169,174,181,0.6); }
+.chain-link.records { border-top: 2px solid var(--gold-500); }
+.chain-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--silver-400); }
+.chain-value { font-size: 1.45rem; color: var(--ivory); font-variant-numeric: tabular-nums; }
+.chain-link.unknown .chain-value { font-size: 1.05rem; color: var(--silver-400); padding-block: 4px; }
+@media (min-width: 1000px) {
+  .chain-link + .chain-link::before {
+    content: ""; position: absolute; left: -15px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
+    border-top: 2px solid var(--gold-500); border-right: 2px solid var(--gold-500); transform: rotate(45deg); opacity: 0.8;
+  }
+}
+.chain-verdict { margin-top: 12px; font-weight: 600; color: var(--gold-300); }
+
+/* Owner board: every business at once */
+.owner-board { margin-top: 20px; padding: 20px; border-radius: var(--radius); border: 1px solid rgba(212,165,55,0.3);
+  background: linear-gradient(160deg, rgba(212,165,55,0.10), transparent 45%), var(--surface-1); box-shadow: var(--edge), var(--lift-gold); }
+.owner-board .stats { margin-top: 0; }
+@media (min-width: 960px) { .stats.owner-totals { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.owner-board .note { padding-block: 12px 0; }
+.team-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.team-card { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.team-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.team-card h2 { font-size: 1.15rem; }
+.team-card h2 a { text-decoration: none; }
+.team-card h2 a:hover { text-decoration: underline; }
+.status { flex: none; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); color: var(--silver-200); background: rgba(255,255,255,0.03); }
+.status.good { color: var(--ok); border-color: rgba(168,230,184,0.4); background: rgba(168,230,184,0.07); }
+.status.bad { color: var(--alert); border-color: rgba(255,180,168,0.5); background: rgba(255,180,168,0.07); }
+.stats.mini { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 0; }
+.stats.mini .stat { padding: 10px 12px 12px; }
+.stats.mini .stat dd { font-size: 1.3rem; }
+.stats.mini .stat dd.unknown { font-size: 0.95rem; }
+.team-card .note { padding-block: 0; }
+.open-business { align-self: flex-start; margin-top: auto; }
+.setup { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 4px; }
+.setup summary { display: flex; align-items: center; gap: 10px; min-height: var(--tap); cursor: pointer; color: var(--silver-200); font-weight: 600; font-size: 0.9rem; }
+.setup-meter { display: inline-flex; gap: 3px; }
+.setup-meter .seg { width: 14px; height: 10px; border-radius: 3px; background: #2A2A2E; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6); }
+.setup-meter .seg.on { background: linear-gradient(180deg, var(--gold-300), var(--gold-600)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 5px -1px rgba(212,165,55,0.6); }
+.setup-list { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 6px; }
+.setup-list li { display: flex; justify-content: space-between; gap: 10px; font-size: 0.9rem; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.02); }
+.setup-list li.on strong { color: var(--ok); }
+.setup-list li.off strong { color: var(--silver-400); }
+
+/* Phone fit. At 320px a tile is about 120px wide, so big numbers scale with the screen and fit whole.
+   No nowrap: if a huge amount still does not fit, it wraps, because a clipped number would be wrong. */
+.stat dd { font-size: clamp(1.25rem, 5vw, 1.85rem); }
+.chain-value { font-size: clamp(1.1rem, 4.6vw, 1.45rem); }
+.stats.owner-totals .stat dd { font-size: clamp(1.25rem, 2.2vw, 1.6rem); }
+@media (max-width: 420px) {
+  .ads-panel, .site-panel, .panel, .owner-board { padding: 14px; }
+  .team-card { padding: 14px; }
+}
+.team-card { container-type: inline-size; }
+.stats.mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stats.mini .stat dd { font-size: 1.15rem; }
+@container (min-width: 380px) { .stats.mini { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
