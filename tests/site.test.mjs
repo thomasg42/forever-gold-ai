@@ -7,7 +7,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PAIRS, SITE, liveStats, shownWork } from '../site.config.mjs';
 import { hoursBack, missedCallLeak } from '../src/assets/calc.js';
-import { facetState } from '../src/assets/site.js';
+import { brainProgress, facetState } from '../src/assets/site.js';
 import { applyPrefill, bootForms, captureSource, smsText, track } from '../src/assets/forms.js';
 import { bootCalcs } from '../src/assets/site.js';
 import { loadLinkedom } from '../tools/dev-deps.mjs';
@@ -654,4 +654,40 @@ test('v3: pictures in every box, no dimmed cards, form near the top, About tells
   assert.doesNotMatch(demo, /kraken|bridger|birdie|montana movers/i);
   assert.match(demo, /noindex/);
   assert.match(demo, /window\.CRM_API/);
+});
+
+test('your own brain: page, home section, real picture, IRS source, and the scroll grow', () => {
+  const page = doc('your-own-brain/index.html');
+  assert.equal(page.querySelector('h1').textContent, 'Your business, in one brain.');
+  const fig = page.querySelector('[data-brain]');
+  assert.ok(fig);
+  const img = fig.querySelector('img');
+  assert.match(img.getAttribute('src'), /assets\/img\/brain-graph-720\.webp/);
+  assert.match(img.getAttribute('alt'), /Thomas Gutierrez's own business brain/);
+  for (const w of [720, 1200]) {
+    const file = join(docs, `assets/img/brain-graph-${w}.webp`);
+    assert.equal(readFileSync(file).subarray(8, 12).toString(), 'WEBP');
+    assert.ok(statSync(file).size < 260 * 1024, `${w}`);
+  }
+  assert.match(fig.querySelector('figcaption').textContent, /Thomas’s own business brain/);
+  assert.equal(fig.querySelectorAll('[data-feed]').length, 3);
+  for (const id of ['scatter', 'moments', 'urgency', 'how', 'holds', 'grows', 'proof']) assert.ok(page.querySelector(`[data-brain-${id}]`), id);
+  assert.match(page.querySelector('[data-brain-moments]').textContent, /Tax season/);
+  const irs = page.querySelector('[data-brain-urgency] [data-stat-id="s7"] .source a');
+  assert.equal(irs.getAttribute('href'), 'https://www.irs.gov/businesses/small-businesses-self-employed/how-long-should-i-keep-records');
+  assert.ok(page.querySelectorAll('[data-brain-proof] [data-call-now], .brain-hero [data-call-now]').length >= 2);
+  const home = doc('index.html');
+  const section = home.querySelector('[data-brain-home]');
+  assert.ok(section);
+  assert.ok(section.querySelector('a[href="./your-own-brain/"]'));
+  assert.ok(section.querySelector('[data-brain] img'));
+  assert.ok(home.querySelector('.site-footer a[href="./your-own-brain/"]'));
+  assert.match(read('sitemap.xml'), /\/your-own-brain\//);
+  assert.ok(read('the-numbers/index.html').includes('data-stat-id="s7"'));
+  assert.doesNotMatch(read('your-own-brain/index.html'), /Cortana|you own it|never leaves|HIPAA|SOC 2|audit-proof/i);
+  assert.equal(brainProgress(800, 800), 0);
+  assert.equal(brainProgress(240, 800), 1);
+  assert.equal(brainProgress(-500, 800), 1);
+  assert.ok(brainProgress(520, 800) > 0.4 && brainProgress(520, 800) < 0.6);
+  assert.equal(brainProgress(10, 0), 1);
 });

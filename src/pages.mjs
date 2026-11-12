@@ -111,13 +111,14 @@ function guide(ctx, { more = true } = {}) {
   </div>`;
 }
 
-function ownAi() {
+function ownAi(ctx) {
   return `<div class="own-ai reveal" data-own-ai>
     <p class="kicker">Tell it once</p>
     <h2>Your business gets its own AI.</h2>
     <p>Everything Thomas builds feeds one system that knows your services, your customers, your invoices and your numbers. It answers from what you approved. Anything it is unsure about comes to you.</p>
     <p>It grows with you. Add a service, a crew or a location and you tell it once. The next person you hire does not need the whole business explained from memory.</p>
     <p>Forever Gold AI keeps it running and upgrading as AI changes. It is not sealed on launch day.</p>
+    <p><a class="text-link" href="${ctx.link('your-own-brain')}">Your own brain: everything in one place</a></p>
   </div>`;
 }
 
@@ -134,6 +135,134 @@ function actionRow(ctx, auditHref) {
       <a class="btn btn-gold" href="${ctx.tel}" aria-label="${callLabel(ctx)}" data-call-now>Call Now · ${esc(ctx.SITE.phone.display)}</a>
       <a class="btn btn-ghost" href="${auditHref || ctx.link('free-audit')}">Get my free AI consultant audit</a>
     </div>`;
+}
+
+// Your own brain (Thomas 2026-11-12): every receipt, invoice, photo and note from every phone and computer lands in one place
+// that grows with the business. The picture is Thomas's own vault graph, recolored gold. It carries no readable labels.
+const BRAIN_SCATTER = [
+  'Receipts ride in the truck, the glovebox and a jacket pocket.',
+  'Invoices sit in one inbox. Quotes sit in another.',
+  'Job photos live on your phone, and on your crew’s phones.',
+  'Notes are on a pad, in your texts, and in your head.',
+  'The one person who knows where everything is, is you.',
+];
+
+const BRAIN_MOMENTS = [
+  { id: 'invoices', title: 'Tax season', text: 'Your accountant asks for every receipt from last year. You either hand over one folder, or you lose a weekend to the truck, the inbox and the shoebox.' },
+  { id: 'quotes', title: 'A customer pushes back', text: 'A customer says the job was never quoted that way. You pull up the quote, the photos and the signed agreement, or you argue from memory.' },
+  { id: 'crew', title: 'A new hire starts', text: 'The new hire asks how you do it. The answer is already written down, or you explain the business again for the fifth time.' },
+];
+
+const BRAIN_HOLDS = [
+  { id: 'invoices', title: 'Receipts and invoices', text: 'Snapped at the counter or saved from email, filed by job, customer and month.' },
+  { id: 'customers', title: 'Customers', text: 'Who they are, what they asked for, what you quoted and what they paid.' },
+  { id: 'documents', title: 'Agreements and paperwork', text: 'Signed agreements, permits and forms, next to the job they belong to.' },
+  { id: 'photos', title: 'Job photos and notes', text: 'Before and after pictures and the notes from the job, where the next person can find them.' },
+  { id: 'crew', title: 'How you do things', text: 'Your prices, steps and checklists, written once so nobody has to ask you twice.' },
+  { id: 'numbers', title: 'The numbers', text: 'What came in and what went out, from the same records, ready when someone asks.' },
+];
+
+const BRAIN_ART = { invoices: 'invoice', quotes: 'quote', crew: 'crew', customers: 'customers', documents: 'documents', photos: 'jobsite', numbers: 'dashboard' };
+const brainArt = (id) => art(BRAIN_ART[id]);
+
+function brainFigure(ctx, { caption = true } = {}) {
+  const src = (w) => ctx.asset(`img/brain-graph-${w}.webp`);
+  const feeds = ['Your phone', 'Your computers', 'Your email'].map((label, i) => `<li data-feed="${i + 1}">${label}</li>`).join('');
+  return `<figure class="brain-figure" data-brain>
+    <ul class="brain-feeds" aria-label="Where things come in from">${feeds}</ul>
+    <div class="brain-frame"><img src="${src(720)}" srcset="${src(720)} 720w, ${src(1200)} 1200w" sizes="(min-width: 900px) 520px, 92vw" width="1200" height="1200" loading="lazy" decoding="async" alt="Thomas Gutierrez's own business brain: gold dots, each one a note, file or picture, linked into clusters that grew as the business grew."></div>
+    ${caption ? '<figcaption>This is Thomas’s own business brain. Every dot is a note, a file or a picture. Every line links two of them. Each cluster is a part of the business that grew as the work grew. Screenshot from November 2026, recolored in gold for this page.</figcaption>' : ''}
+  </figure>`;
+}
+
+function brainHome(ctx) {
+  return `<section class="section" data-brain-home>
+  <div class="wrap brain-split">
+    <div class="prose reveal">
+      <p class="kicker">Your own brain</p>
+      <h2>Everything in one place, from every device.</h2>
+      <p>A receipt snapped on your phone, an invoice saved on the office computer, a note typed on the laptop. All of it lands in one brain that belongs to your business and grows with it.</p>
+      <p>When tax season comes, or you need that one photo from last spring, you know exactly where it is. The more business you do, the more it holds, and the more you can build on top of it.</p>
+      <p><a class="text-link" href="${ctx.link('your-own-brain')}">See how your own brain works</a></p>
+    </div>
+    ${brainFigure(ctx, { caption: false })}
+  </div>
+</section>`;
+}
+
+function brainPage(ctx) {
+  const scatter = BRAIN_SCATTER.map((line) => `<li class="reveal">${esc(line)}</li>`).join('');
+  const moments = BRAIN_MOMENTS.map((item) => `<article class="pillar frame reveal" data-moment="${item.id}"><div class="frame-inner">${brainArt(item.id)}<h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></div></article>`).join('');
+  const holds = BRAIN_HOLDS.map((item) => `<article class="pillar frame reveal" data-holds="${item.id}"><div class="frame-inner">${brainArt(item.id)}<h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></div></article>`).join('');
+  return `${crumbs(ctx, [{ path: '', name: 'Home' }, { path: 'your-own-brain', name: 'Your own brain' }])}
+<section class="section brain-hero"><div class="wrap brain-split">
+  <div>
+    <p class="kicker">Your own brain</p>
+    <h1>Your business, in one brain.</h1>
+    <p class="lead">Every invoice, receipt, photo, note and customer record lands in one place, from your phone and every computer you work on. It grows with you. The more business you do, the more it knows.</p>
+    ${actionRow(ctx)}
+  </div>
+  ${brainFigure(ctx)}
+</div></section>
+<section class="section section-ivory" data-brain-scatter><div class="wrap">
+  <p class="kicker">Where is it right now?</p>
+  <h2>Today your business lives in five places.</h2>
+  <ul class="stakes-list">${scatter}</ul>
+  <p class="stakes-turn reveal">That works until somebody asks for it.</p>
+</div></section>
+<section class="section" data-brain-moments><div class="wrap">
+  <p class="kicker">The day someone asks</p>
+  <h2>Three days every owner has.</h2>
+  <div class="pillar-grid consult-grid">${moments}</div>
+</div></section>
+<section class="section section-ivory" data-brain-urgency><div class="wrap brain-split brain-urgency">
+  <div class="prose reveal">
+    <p class="kicker">Why start now</p>
+    <h2>The pile only gets bigger.</h2>
+    <p>Tax records are not a one-year problem. Every month the business runs on memory adds more paper to dig through later. Every month it runs on one brain, each receipt is filed the day it comes in.</p>
+    <p>The filing date does not move. The receipts are either ready when it comes, or they are not.</p>
+  </div>
+  <div class="stat-grid reveal">${statGroup(['s7'])}</div>
+</div></section>
+<section class="section" data-brain-how><div class="wrap prose">
+  <p class="kicker">How it works</p>
+  <h2>Capture it. It lands in one place. Ask for it.</h2>
+  <ol class="flow consult-steps">
+    <li class="reveal"><span><strong>Capture it where you are.</strong> Snap the receipt at the counter, save the invoice on the office computer, forward the email. Nobody changes how they work.</span></li>
+    <li class="reveal"><span><strong>It lands in one place.</strong> Your phone, your laptop and the office computer all feed the same brain, filed the same way every time: by customer, by job and by month.</span></li>
+    <li class="reveal"><span><strong>Ask for it.</strong> When tax season comes, or you need that one photo, you know where it is. Your own AI can find it for you and answer from it.</span></li>
+  </ol>
+</div></section>
+<section class="section section-ivory" data-brain-holds><div class="wrap">
+  <p class="kicker">What goes in it</p>
+  <h2>Everything only you know about.</h2>
+  <div class="pillar-grid consult-grid">${holds}</div>
+</div></section>
+<section class="section" data-brain-grows><div class="wrap prose reveal">
+  <p class="kicker">It grows with you</p>
+  <h2>The more business you get, the more you can build.</h2>
+  <p>On day one it holds this year’s receipts. A year in, it holds every customer, every job, every quote and every lesson the business learned.</p>
+  <p>Everything else Thomas builds stands on it. A receptionist answers from it. Follow-up knows who the customer is. The numbers come from the same records you hand your accountant. A new location or a new crew is added once, and the brain knows.</p>
+</div></section>
+<section class="section section-ivory" data-brain-proof><div class="wrap prose reveal">
+  <p class="kicker">We run on it</p>
+  <h2>The picture on this page is Thomas’s.</h2>
+  <p>Client work, invoices, receipts, scripts, every build and every lesson live in one brain that Thomas uses from his phone and his computers. Forever Gold AI runs on it every day.</p>
+  <p>If he has built it for himself, he can build it for you, around the tools you already use.</p>
+  ${actionRow(ctx)}
+</div></section>
+${ctaBand(ctx, { title: 'Get the business out of your head.', href: ctx.link('free-audit'), lead: 'The free audit starts with where your receipts, invoices and records live today.' })}`;
+}
+
+function brainSchema(ctx) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: 'Your own business brain',
+    serviceType: 'Business records and knowledge system',
+    description: DESCRIPTIONS.brain,
+    provider: { '@id': ctx.abs('#business') },
+  };
 }
 
 function home(ctx) {
@@ -161,8 +290,9 @@ ${stakes()}
   </div>
 </section>
 <section class="section section-ivory">
-  <div class="wrap prose">${ownAi()}</div>
+  <div class="wrap prose">${ownAi(ctx)}</div>
 </section>
+${brainHome(ctx)}
 ${swoosh()}
 ${tuesday(ctx)}
 <section class="section" data-tuesday-action>
@@ -243,7 +373,7 @@ function consultingPage(ctx) {
   </ol>
   ${actionRow(ctx)}
 </div></section>
-<section class="section"><div class="wrap prose">${ownAi()}</div></section>
+<section class="section"><div class="wrap prose">${ownAi(ctx)}</div></section>
 <section class="section section-ivory" data-subscriptions><div class="wrap prose reveal">
   <h2>Stop paying for tools that each do one piece.</h2>
   <p>If you pay a stack of monthly subscriptions for tools that each do one piece, Thomas can rebuild some of those platforms around your business. It is customized, on your terms, and not at the mercy of someone else's price changes.</p>
@@ -331,6 +461,7 @@ ${pageHead('The Numbers', 'Research you can check.', 'Every figure on this page 
   <h2>How to read these numbers</h2>
   <p>The Census figure and the Thryv figure measure different things. One counts production use across U.S. firms. The other counts any use among surveyed small businesses. Read them side by side. Do not fold them into one number.</p>
   <p>The callback figures come from one vendor's customers. They describe missed calls in that set.</p>
+  <p>The IRS figure is a rule, not a survey. It is the usual floor for how long business tax records should be kept.</p>
 </div></section>
 ${ctaBand(ctx, { title: 'Want your own numbers looked at?', href: ctx.link('free-audit'), lead: 'The free audit starts from your calls, leads and invoices.' })}`;
 }
@@ -605,6 +736,7 @@ const TITLES = {
 
 const DESCRIPTIONS = {
   home: 'AI consultant Thomas Gutierrez puts your invoices, receipts, leads and calls on one system that remembers your business. Bozeman, Montana, working anywhere.',
+  brain: 'Every receipt, invoice, photo and note from your phone and computers, in one place that grows with your business. Ready for tax season or any day.',
   consulting: 'AI consulting for the back office only you know about. Thomas maps the work, cleans it up, and builds one system that grows with your business.',
   systems: 'Eight AI systems for calls, follow-up, websites, booking, invoices, documents, crew apps, and operations. See which stage each one fits.',
   'ai-receptionist': 'An AI receptionist answers in your business name, books or takes a message, and sends you the summary. Unsure calls come to you.',
@@ -631,6 +763,7 @@ const DESCRIPTIONS = {
 export const PAGES = [
   { slug: '', title: 'AI Consultant for Small Business | Forever Gold AI', description: DESCRIPTIONS.home, body: home, bodyClass: 'page-home', schema: (ctx) => [businessSchema(ctx), webSiteSchema(ctx)] },
   { slug: 'consulting', title: 'AI Consulting for Your Back Office | Forever Gold AI', description: DESCRIPTIONS.consulting, body: consultingPage, schema: (ctx) => [consultingSchema(ctx), faqSchema(CONSULT_FAQS), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'consulting', name: 'AI consulting' }])] },
+  { slug: 'your-own-brain', title: 'Your Own Business Brain | Forever Gold AI', description: DESCRIPTIONS.brain, body: brainPage, bodyClass: 'page-brain', schema: (ctx) => [brainSchema(ctx), breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'your-own-brain', name: 'Your own brain' }])] },
   { slug: 'systems', title: 'Eight AI Systems for Business | Forever Gold AI', description: DESCRIPTIONS.systems, body: systemsHub, schema: (ctx) => [breadcrumbSchema(ctx, [{ path: '', name: 'Home' }, { path: 'systems', name: 'Systems' }])] },
   ...SITE.systems.map((system) => ({
     slug: `systems/${system.id}`,

@@ -339,3 +339,25 @@ elevenlabs-convai { bottom: var(--tap) !important; }
   .chapter { grid-template-columns: 300px 1fr; gap: 40px; }
 }
 form[data-lead] a, form[data-lead] .text-link { color: var(--gold-800); }
+/* Your own brain (Thomas 2026-11-12). The picture is Thomas's real vault graph. As it scrolls into view it grows and
+   brightens, and the three feeds light up one by one: phone, computers, email all landing in one place. */
+.brain-split { display: grid; gap: 28px; align-items: center; }
+.brain-figure { margin: 0; display: grid; gap: 14px; justify-items: center; --grow: 1; }
+.brain-frame { width: 100%; max-width: 520px; aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: var(--black-900); box-shadow: 0 0 0 1px var(--gold-600), 0 0 60px rgba(212,165,55,0.18); }
+.brain-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.js-motion .brain-frame img { transform: scale(calc(0.84 + 0.16 * var(--grow))); opacity: calc(0.45 + 0.55 * var(--grow)); }
+.brain-feeds { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.brain-feeds li { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--gold-600); color: var(--gold-300); }
+.js-motion .brain-feeds li { opacity: 0.35; transition: opacity 300ms ease, background 300ms ease, color 300ms ease; }
+.js-motion .brain-feeds li.is-on { opacity: 1; background: var(--gold-500); color: var(--black-950); }
+.brain-figure figcaption { max-width: 520px; font-size: 0.92rem; color: var(--silver-400); text-align: center; }
+.section-ivory .brain-figure figcaption { color: var(--ink-soft); }
+.brain-hero h1 { margin-top: 0.2em; }
+.brain-urgency .stat-grid { grid-template-columns: 1fr; }
+@media (min-width: 900px) {
+  .brain-split { grid-template-columns: 1fr 1fr; gap: 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brain-frame img { transform: none !important; opacity: 1 !important; }
+  .brain-feeds li { opacity: 1 !important; }
+}

@@ -144,6 +144,7 @@ function footer(ctx) {
   const pages = [
     ['', 'Home'],
     ['consulting', 'Consulting'],
+    ['your-own-brain', 'Your own brain'],
     ['systems', 'Systems'],
     ['stages', 'Stages'],
     ['the-numbers', 'The Numbers'],

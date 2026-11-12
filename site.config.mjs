@@ -33,7 +33,7 @@ export const SITE = {
   bookingUrl: 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ3xvnaeAs43UTKKRuYL5yyKk6RuLX3h0M5D2bcwaaZA-kcI1yusbu_K1Ma-sMTZpktCR3QVDMaI',
   goldie: { widget: { agentId: 'agent_5801m626gmhgf3b9xajs3dz9e48b' } },
   analytics: { metaPixelId: '859617090012480' },
-  assetVersion: '20261112-pictures',
+  assetVersion: '20261112-brain',
   updated: '2026-11-12',
   year: 2026,
   smsBody: "Hi Thomas, I found Forever Gold AI online. I'd like to talk about my business.",
@@ -121,6 +121,18 @@ export const SITE = {
       label: 'of organizations use AI in at least one business function',
       sourceChip: 'McKinsey, The state of AI in 2025',
       sourceUrl: 'https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai',
+    },
+    {
+      // Read on irs.gov by Lane 1, 2026-11-12: "Keep records for 3 years if situations (4), (5), and (6) below do not apply"
+      // and "Keep employment tax records for at least 4 years". A rule, not a survey.
+      id: 's7',
+      status: 'verified',
+      figure: '3 years',
+      // No count-up: it would flash "1 years" on the way to 3.
+      count: null,
+      label: 'is how long the IRS says to keep most business tax records. Employment tax records: at least 4 years.',
+      sourceChip: 'IRS, How long should I keep records?',
+      sourceUrl: 'https://www.irs.gov/businesses/small-businesses-self-employed/how-long-should-i-keep-records',
     },
   ],
   systems: [

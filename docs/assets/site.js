@@ -168,6 +168,40 @@ export function bootGem(doc) {
   update();
 }
 
+// Your own brain: the graph grows and brightens as it scrolls into view, and the feeds light up in turn.
+export function brainProgress(top, height) {
+  if (!(height > 0)) return 1;
+  const p = (height - top) / (height * 0.7);
+  return Math.min(1, Math.max(0, p));
+}
+
+function bootBrain(doc) {
+  const figures = [...doc.querySelectorAll('[data-brain]')];
+  if (!figures.length) return;
+  const view = doc.defaultView || window;
+  const paint = (fig, grow) => {
+    fig.style.setProperty('--grow', grow.toFixed(3));
+    fig.querySelectorAll('[data-feed]').forEach((li) => {
+      li.classList.toggle('is-on', grow >= Number(li.getAttribute('data-feed')) / 4);
+    });
+  };
+  if (!doc.documentElement.classList.contains('js-motion')) {
+    figures.forEach((fig) => paint(fig, 1));
+    return;
+  }
+  let frame = 0;
+  const update = () => {
+    frame = 0;
+    figures.forEach((fig) => paint(fig, brainProgress(fig.getBoundingClientRect().top, view.innerHeight)));
+  };
+  const request = () => {
+    if (!frame) frame = requestAnimationFrame(update);
+  };
+  view.addEventListener('scroll', request, { passive: true });
+  view.addEventListener('resize', request);
+  update();
+}
+
 function bootTuesday(doc) {
   const root = doc.querySelector('[data-tuesday]');
   if (!root || typeof IntersectionObserver !== 'function') return;
@@ -286,6 +320,7 @@ export function boot(doc, config) {
   bootReveals(doc);
   bootCounts(doc);
   bootGem(doc);
+  bootBrain(doc);
   bootTuesday(doc);
   bootRail(doc);
   bootCalcs(doc);
