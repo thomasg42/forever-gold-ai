@@ -182,7 +182,8 @@ form[data-lead] .btn-ghost { color: var(--ink); border-color: var(--gold-800); }
 .icon { flex: none; }
 .tap-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--black-900); border-top: 1px solid var(--gold-600); }
 .tap-bar a { color: var(--ivory); text-decoration: none; display: grid; place-items: center; min-height: var(--tap); }
-.tap-bar a:last-child { background: var(--gold-500); color: var(--black-950); font-weight: 600; }
+.tap-bar a:first-child { background: var(--gold-500); color: var(--black-950); font-weight: 600; }
+.tap-bar a:focus-visible { outline: 3px solid var(--ivory); outline-offset: -3px; }
 elevenlabs-convai { bottom: var(--tap) !important; }
 .crumbs ol { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 16px 0 0; margin: 0; color: var(--silver-400); }
 .crumbs a { color: var(--silver-200); }
@@ -229,3 +230,56 @@ elevenlabs-convai { bottom: var(--tap) !important; }
   .facet-chip, .hero-motto { opacity: 1 !important; }
 }
 :focus-visible { outline: 2px solid var(--gold-300); outline-offset: 3px; }
+
+/* Call Now, site-wide (Thomas 2026-11-06 rule). Lives in the sticky header, so it never covers a form. */
+.header-phone.header-call-now { gap: 8px; padding: 6px 12px; background: var(--gold-500); color: var(--black-950); font-weight: 600; white-space: nowrap; flex: 0 0 auto; }
+.header-phone.header-call-now:hover { background: var(--gold-300); }
+.header-phone.header-call-now:focus-visible { outline: 3px solid var(--ivory); outline-offset: 3px; }
+.call-ico { width: 18px; height: 18px; flex: none; }
+.header-call-copy { display: flex; flex-direction: column; gap: 1px; line-height: 1.1; text-align: left; }
+.header-call-copy strong { font-size: 0.92rem; }
+.header-call-copy > span { font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.consult-grid { margin-bottom: 18px; }
+.consult-steps strong { color: inherit; }
+@media (max-width: 360px) {
+  .header-row { gap: 8px; }
+  .header-phone.header-call-now { padding-inline: 8px; gap: 6px; }
+  .call-ico { display: none; }
+  .brand-logo { width: 44px; height: 44px; }
+}
+
+/* v2: consulting-first sections. Ghost buttons and leads stay readable on ivory. */
+.section-ivory .btn-ghost { color: var(--ink); border-color: var(--gold-800); }
+.section-ivory .btn-gold { color: var(--black-950); }
+.nav-menu a.btn { padding-inline: 14px; }
+.hero h1 { font-size: clamp(2.1rem, 4.6vw, 3.8rem); }
+.prose .kicker + h2, .own-ai .kicker + h2 { margin-top: 0; }
+.section-ivory .lead { color: var(--ink-soft); }
+.header-ig { min-width: 48px; justify-content: center; }
+.header-ig span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.stakes-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.stakes-list li { position: relative; padding: 12px 14px 12px 42px; border: 1px solid #ddd4c4; background: #fff; color: var(--ink); }
+.stakes-list li::before { content: ""; position: absolute; left: 16px; top: 50%; width: 10px; height: 10px; border: 1px solid var(--gold-800); transform: translateY(-50%) rotate(45deg); }
+.stakes-turn { font-family: "Playfair Display", serif; font-weight: 700; font-size: clamp(1.25rem, 2.4vw, 1.6rem); line-height: 1.3; color: var(--ink); margin: 22px 0 0; max-width: 44rem; }
+.guide-quote { margin: 0 0 10px; padding: 0 0 0 18px; border-left: 3px solid var(--gold-500); }
+.guide-quote p { font-family: "Playfair Display", serif; font-weight: 700; font-size: clamp(1.35rem, 2.6vw, 1.9rem); line-height: 1.3; color: var(--ivory); margin: 0; }
+.section-ivory .guide-quote p { color: var(--ink); }
+.section-ivory .guide-quote { border-left-color: var(--gold-800); }
+.guide-by { color: var(--silver-400); font-size: 0.95rem; margin-bottom: 18px; }
+.section-ivory .guide-by { color: var(--ink-soft); }
+.chip-dark li { color: var(--silver-200); border-color: var(--gold-600); }
+.consult-link { margin-top: 24px; }
+.page-intro .btn-row { margin: 18px 0 10px; }
+.js-motion .stakes-list li:nth-child(2), .js-motion .consult-grid > :nth-child(2), .js-motion .consult-steps li:nth-child(2) { transition-delay: 70ms; }
+.js-motion .stakes-list li:nth-child(3), .js-motion .consult-grid > :nth-child(3), .js-motion .consult-steps li:nth-child(3) { transition-delay: 140ms; }
+.js-motion .stakes-list li:nth-child(4), .js-motion .consult-grid > :nth-child(4) { transition-delay: 210ms; }
+.js-motion .stakes-list li:nth-child(5), .js-motion .consult-grid > :nth-child(5) { transition-delay: 280ms; }
+.js-motion .stakes-list li:nth-child(6), .js-motion .consult-grid > :nth-child(6) { transition-delay: 350ms; }
+@media (min-width: 800px) {
+  .stakes-list { grid-template-columns: repeat(2, 1fr); }
+  .consult-grid > :last-child:nth-child(3n+1) { grid-column: 1 / -1; }
+}
+@media (min-width: 900px) {
+  .nav-menu, .js .nav-menu { order: 4; }
+  .header-phone.header-call-now { order: 5; margin-left: 4px; }
+}

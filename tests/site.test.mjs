@@ -541,3 +541,71 @@ test('client portal stays private, tracker free, and names nobody', () => {
   const home = readFileSync(join(docs, 'index.html'), 'utf8');
   assert.match(home, /href="[^"]*crm\/?"[^>]*>Client login</);
 });
+
+test('Call Now on every public page, first in the tap bar, and consulting comes first', () => {
+  const label = `Call Now, ${SITE.name} at ${SITE.phone.display}`;
+  for (const file of htmlFiles()) {
+    const parsed = parseHTML(readFileSync(file, 'utf8')).document;
+    const head = parsed.querySelector('.site-header a.header-call-now');
+    assert.ok(head, file);
+    assert.equal(head.getAttribute('href'), `tel:${SITE.phone.e164}`, file);
+    assert.equal(head.getAttribute('aria-label'), label, file);
+    assert.match(head.textContent, /Call Now/, file);
+    assert.match(head.textContent, /\(406\) 698-6693/, file);
+    const first = parsed.querySelector('.tap-bar a');
+    assert.equal(first.getAttribute('href'), `tel:${SITE.phone.e164}`, file);
+    assert.equal(first.textContent.trim(), 'Call Now', file);
+    const nav = [...parsed.querySelectorAll('#nav-menu > a')].map((a) => a.textContent.trim());
+    assert.equal(nav[0], 'Consulting', file);
+    for (const a of parsed.querySelectorAll('a[data-call-now]')) {
+      assert.equal(a.getAttribute('href'), `tel:${SITE.phone.e164}`, file);
+      assert.equal(a.getAttribute('aria-label'), label, file);
+      assert.match(a.textContent, /Call Now/, file);
+    }
+  }
+  const home = doc('index.html');
+  const primary = home.querySelector('.hero .btn-row a');
+  assert.equal(primary.getAttribute('href'), `tel:${SITE.phone.e164}`);
+  assert.match(primary.textContent, /Call Now/);
+  assert.match(read('sitemap.xml'), /https:\/\/forevergoldai\.com\/consulting\//);
+  const consulting = doc('consulting/index.html');
+  assert.match(consulting.querySelector('h1').textContent, /back office only you know about/);
+  assert.ok(consulting.querySelectorAll('a[data-call-now]').length >= 3);
+});
+
+test('hook, story, action: every page ends in a call, home tells the story in order', () => {
+  for (const file of htmlFiles()) {
+    const rel = relPosix(docs, file);
+    if (rel.startsWith('privacy/') || rel.startsWith('sms-terms/')) continue;
+    const parsed = parseHTML(readFileSync(file, 'utf8')).document;
+    assert.ok(parsed.querySelector('main a[data-call-now]'), `no Call Now inside main on ${rel}`);
+  }
+  const html = read('index.html');
+  const order = ['data-hero-slot', 'data-stakes', 'data-stat-id', 'data-guide', 'data-covers', 'data-own-ai', 'data-tuesday', 'data-tuesday-action', 'data-plan', 'data-stage-picker'];
+  const at = order.map((marker) => html.indexOf(marker));
+  at.forEach((pos, i) => assert.ok(pos > -1, `missing ${order[i]}`));
+  for (let i = 1; i < at.length; i += 1) assert.ok(at[i] > at[i - 1], `${order[i]} should come after ${order[i - 1]}`);
+  const consulting = doc('consulting/index.html');
+  assert.equal(consulting.querySelectorAll('[data-cover]').length, 7);
+  assert.equal(doc('index.html').querySelectorAll('[data-cover]').length, 6);
+  assert.ok(consulting.querySelector('[data-plan] ol.flow'));
+  assert.ok(consulting.querySelector('.page-intro a[data-call-now]'), 'Call Now right under the consulting hook');
+  const nav = doc('about/index.html');
+  const items = [...nav.querySelectorAll('#nav-menu > a, #nav-menu > .nav-systems > button')].map((n) => n.textContent.trim());
+  assert.deepEqual(items, ['Consulting', 'Systems', 'Stages', 'Work', 'About', 'Free audit']);
+});
+
+test('Goldie shrinks on phones, ghost buttons stay readable, and no invented client quotes', () => {
+  for (const file of htmlFiles()) {
+    const html = readFileSync(file, 'utf8');
+    const rel = relPosix(docs, file);
+    assert.match(html, /matchMedia\('\(max-width: 899px\)'\)\.matches\)\{document\.querySelector\('elevenlabs-convai'\)\.setAttribute\('variant','tiny'\)/, rel);
+    const text = bodyText(html);
+    assert.doesNotMatch(text, /described the week|\b(an?|one|our) (owner|client|customer)s? (told|said|described)\b/i, rel);
+  }
+  const css = read('assets/site.css');
+  assert.match(css, /\.section-ivory \.btn-ghost \{ color: var\(--ink\)/);
+  assert.match(css, /\.section-ivory \.lead \{ color: var\(--ink-soft\)/);
+  assert.match(css, /\.tap-bar a:first-child \{ background: var\(--gold-500\)/);
+  assert.match(css, /\.section-ivory \.btn-gold \{ color: var\(--black-950\)/);
+});

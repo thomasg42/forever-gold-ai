@@ -62,11 +62,11 @@ export function homeHero(ctx) {
         <h1>${esc(SITE.h1)}</h1>
         <p class="lead">${esc(SITE.sub)}</p>
         <div class="btn-row">
-          <a class="btn btn-gold" href="${ctx.link('free-audit')}">Get my free systems audit</a>
-          <a class="btn btn-ghost" href="${ctx.sms}">Text Thomas</a>
+          <a class="btn btn-gold" href="${ctx.tel}" aria-label="Call Now, ${esc(SITE.name)} at ${esc(SITE.phone.display)}" data-call-now>Call Now · ${esc(SITE.phone.display)}</a>
+          <a class="btn btn-ghost" href="${ctx.link('free-audit')}">Get my free AI consultant audit</a>
         </div>
         <p class="text-row">
-          <a class="text-link" href="${ctx.tel}">Call ${esc(SITE.phone.display)}</a>
+          <a class="text-link" href="${ctx.sms}">Text Thomas</a>
           ${bookLink(ctx)}
         </p>
         <p class="reassure">Free audit. Real answers. No pressure.</p>

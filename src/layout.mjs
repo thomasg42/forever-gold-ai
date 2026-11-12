@@ -98,14 +98,22 @@ function current(ctx, path) {
   return ctx.slug === path ? ' aria-current="page"' : '';
 }
 
+export function callLabel(ctx) {
+  // Visible text says Call Now, so the spoken name starts with it too (WCAG 2.5.3, label in name).
+  return `Call Now, ${esc(ctx.SITE.name)} at ${esc(ctx.SITE.phone.display)}`;
+}
+
+function callNowHeader(ctx) {
+  return `<a class="header-phone header-call-now" href="${ctx.tel}" aria-label="${callLabel(ctx)}" data-call-now><svg class="call-ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg><span class="header-call-copy"><strong>Call Now</strong><span>${esc(ctx.SITE.phone.display)}</span></span></a>`;
+}
+
 function header(ctx) {
   const { SITE } = ctx;
   const systems = SITE.systems.map((system) =>
     `<li><a href="${ctx.link(`systems/${system.id}`)}"${current(ctx, `systems/${system.id}`)}>${esc(system.nav)}</a></li>`).join('');
+  // Six items in the header, so it fits from 320px phones to desktop. The Numbers and Gold Standard stay in the footer.
   const links = [
     ['stages', 'Stages'],
-    ['the-numbers', 'The Numbers'],
-    ['gold-standard', 'Gold Standard'],
     ['work', 'Work'],
     ['about', 'About'],
   ].map(([path, label]) => `<a href="${ctx.link(path)}"${current(ctx, path)}>${label}</a>`).join('');
@@ -114,16 +122,17 @@ function header(ctx) {
 <header class="site-header" data-header>
   <div class="wrap header-row">
     <a class="brand" href="${ctx.link('')}">${logo(ctx, 'brand-logo')}</a>
-    <a class="header-ig" href="${esc(ig.url)}" target="_blank" rel="noopener">${icon(ig.network)}<span>${esc(ig.name)}</span></a>
-    <a class="header-phone" href="${ctx.tel}">${esc(SITE.phone.display)}</a>
+    <a class="header-ig" href="${esc(ig.url)}" target="_blank" rel="noopener" aria-label="${esc(ig.name)}">${icon(ig.network)}<span>${esc(ig.name)}</span></a>
+    ${callNowHeader(ctx)}
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">Menu</button>
     <nav id="nav-menu" class="nav-menu" aria-label="Main">
+      <a href="${ctx.link('consulting')}"${current(ctx, 'consulting')}>Consulting</a>
       <div class="nav-systems">
         <button class="nav-services-btn nav-systems-btn" type="button" aria-expanded="false" aria-controls="nav-systems-list">Systems</button>
         <ul id="nav-systems-list" class="nav-systems-list">${systems}</ul>
       </div>
       ${links}
-      <a class="btn btn-gold nav-audit" href="${ctx.link('free-audit')}"${current(ctx, 'free-audit')}>Free audit</a>
+      <a class="btn btn-ghost nav-audit" href="${ctx.link('free-audit')}"${current(ctx, 'free-audit')}>Free audit</a>
     </nav>
   </div>
 </header>`;
@@ -134,6 +143,7 @@ function footer(ctx) {
   const systems = SITE.systems.map((system) => `<li><a href="${ctx.link(`systems/${system.id}`)}">${esc(system.nav)}</a></li>`).join('');
   const pages = [
     ['', 'Home'],
+    ['consulting', 'Consulting'],
     ['systems', 'Systems'],
     ['stages', 'Stages'],
     ['the-numbers', 'The Numbers'],
@@ -172,8 +182,8 @@ function footer(ctx) {
   </div>
   <p class="wrap legal">© ${SITE.year} ${esc(SITE.name)}. ${esc(SITE.motto)}</p>
 </footer>
-<nav class="tap-bar" aria-label="Call, text, or free audit">
-  <a href="${ctx.tel}">Call</a>
+<nav class="tap-bar" aria-label="Call now, text, or free audit">
+  <a href="${ctx.tel}" aria-label="${callLabel(ctx)}" data-call-now>Call Now</a>
   <a href="${ctx.sms}">Text</a>
   <a href="${ctx.link('free-audit')}">Free audit</a>
 </nav>`;
@@ -278,8 +288,8 @@ export function ctaBand(ctx, { title, href, lead }) {
     <h2>${esc(title)}</h2>
     ${lead ? `<p>${esc(lead)}</p>` : ''}
     <div class="btn-row">
-      <a class="btn btn-gold" href="${href}">Get my free systems audit</a>
-      <a class="text-link" href="${ctx.tel}">Call ${esc(SITE.phone.display)}</a>
+      <a class="btn btn-gold" href="${ctx.tel}" aria-label="${callLabel(ctx)}" data-call-now>Call Now · ${esc(SITE.phone.display)}</a>
+      <a class="btn btn-ghost" href="${href}">Get my free AI consultant audit</a>
       <a class="text-link" href="${ctx.sms}">Text Thomas</a>
       ${book}
     </div>
@@ -295,6 +305,7 @@ function goldieWidget(ctx) {
   const agentId = ctx.SITE.goldie && ctx.SITE.goldie.widget && ctx.SITE.goldie.widget.agentId;
   if (!agentId) return '';
   return `<elevenlabs-convai agent-id="${esc(agentId)}"></elevenlabs-convai>
+<script>try{if(window.matchMedia&&window.matchMedia('(max-width: 899px)').matches){document.querySelector('elevenlabs-convai').setAttribute('variant','tiny');}}catch(e){}</script>
 <script src="${GOLDIE_WIDGET_SRC}" async type="text/javascript"></script>
 <script src="${ctx.asset('goldie-voice.js')}" defer></script>`;
 }
