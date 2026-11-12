@@ -357,7 +357,20 @@ test('system pages, work, stripe, and goldie', () => {
     const present = hrefs.includes(item.url);
     assert.equal(present, item.show, item.id);
   }
-  assert.doesNotMatch(workHtml, /kraken|montana-movers|bridger|birdies|coachdaddy|justus|noodles/i);
+  // Client sites appear only when their card is switched on (after that client said yes). Everything else stays off the page.
+  const clientShown = SITE.work.filter((item) => item.group === 'client' && item.show);
+  if (clientShown.length === 0) assert.doesNotMatch(workHtml, /kraken|montana-movers|montanamovers|bridger|birdies|coachdaddy|justus|noodles/i);
+  for (const item of SITE.work.filter((w) => w.group === 'client' && !w.show)) {
+    assert.equal(workHtml.includes(item.title.replace(/'/g, '&#39;')) || workHtml.includes(item.title), false, item.id);
+  }
+  assert.doesNotMatch(workHtml, /coachdaddy|justus|noodles/i);
+  // Every card says plainly whether it is live or a demo.
+  for (const card of work.querySelectorAll('[data-work]')) {
+    const status = card.querySelector('[data-status]');
+    assert.ok(status && /^(Live|Pre-launch|Demo)/.test(status.textContent.trim()), card.getAttribute('data-work'));
+  }
+  assert.ok(work.querySelector('[data-work="crm-demo"] a[href="https://forevergoldai.com/crm/demo/"]'));
+  assert.match(work.querySelector('[data-work="goldsign"] [data-status]').textContent, /Demo/);
   const privacy = read('privacy/index.html');
   const sms = read('sms-terms/index.html');
   for (const needle of [
@@ -608,4 +621,37 @@ test('Goldie shrinks on phones, ghost buttons stay readable, and no invented cli
   assert.match(css, /\.section-ivory \.lead \{ color: var\(--ink-soft\)/);
   assert.match(css, /\.tap-bar a:first-child \{ background: var\(--gold-500\)/);
   assert.match(css, /\.section-ivory \.btn-gold \{ color: var\(--black-950\)/);
+});
+
+test('v3: pictures in every box, no dimmed cards, form near the top, About tells the story', () => {
+  const home = doc('index.html');
+  const cards = [...home.querySelectorAll('.system-card')];
+  assert.equal(cards.length, 8);
+  for (const card of cards) {
+    assert.ok(card.querySelector('.art-panel svg'), 'system card art');
+    assert.match(card.querySelector('[data-card-stage]').textContent, /^(Fits|Add at) (Start|Grow|Scale)$/);
+  }
+  assert.equal(home.querySelectorAll('.system-card.is-match').length, SITE.stages[0].systems.length);
+  for (const pillar of home.querySelectorAll('.pillar')) assert.ok(pillar.querySelector('.art-panel svg'), 'pillar art');
+  assert.equal(home.querySelectorAll('.pillar .art-panel').length, home.querySelectorAll('.pillar').length);
+  const css = read('assets/site.css');
+  assert.doesNotMatch(css, /is-dim/);
+  assert.match(css, /\.frame-inner \{ flex: 1 1 auto/);
+  const js = read('assets/site.js');
+  assert.doesNotMatch(js, /is-dim/);
+  const audit = read('free-audit/index.html');
+  const main = audit.slice(audit.indexOf('<main'));
+  const formAt = main.indexOf('<form');
+  assert.ok(formAt > 0 && formAt < main.indexOf('Why owners ask for it'), 'form comes before the explanation');
+  assert.ok(main.indexOf('data-call-now') < formAt, 'Call Now sits above the form');
+  const about = doc('about/index.html');
+  const chapters = [...about.querySelectorAll('[data-chapter] h2')].map((h) => h.textContent);
+  assert.equal(chapters.length, 5);
+  const aboutText = bodyText(read('about/index.html'));
+  for (const line of ['stepped down', 'Bozeman, Montana', 'Gold Mobile Mechanic', 'memory base', 'jobsite demo']) assert.ok(aboutText.includes(line), line);
+  assert.doesNotMatch(aboutText, /Obsidian|Cortana|Scott/);
+  const demo = readFileSync(join(docs, 'crm/demo/index.html'), 'utf8').replace(/data:[a-z/+-]+;base64,[A-Za-z0-9+/=]+/g, '');
+  assert.doesNotMatch(demo, /kraken|bridger|birdie|montana movers/i);
+  assert.match(demo, /noindex/);
+  assert.match(demo, /window\.CRM_API/);
 });

@@ -1,4 +1,5 @@
 import { liveStats, statById } from '../site.config.mjs';
+import { pillarArt, systemArt } from './art.mjs';
 
 const esc = (s) => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -97,9 +98,21 @@ export function statGroup(ids, opts) {
   return ids.map((id) => statCard(statById(id), opts)).join('');
 }
 
+// Stage tag: every card stays full brightness. The tag says whether it fits the picked stage or comes later
+// (Thomas 2026-11-12: dimmed cards read as broken). site.js keeps the tag in step with the picker.
+const STAGE_NAMES = { start: 'Start', grow: 'Grow', scale: 'Scale' };
+export function stageTag(stages, stage) {
+  if (stages.includes(stage)) return { fits: true, text: `Fits ${STAGE_NAMES[stage]}` };
+  return { fits: false, text: `Add at ${STAGE_NAMES[stages[0]]}` };
+}
+
 export function systemCard(ctx, system) {
-  return `<article class="system-card frame" data-stages="${system.stages.join(' ')}">
+  const first = ctx.SITE.stages[0].id;
+  const tag = stageTag(system.stages, first);
+  return `<article class="system-card frame${tag.fits ? ' is-match' : ''}" data-stages="${system.stages.join(' ')}">
   <div class="frame-inner">
+    ${systemArt(system.id)}
+    <p class="card-stage" data-card-stage>${esc(tag.text)}</p>
     <p class="kicker">${esc(system.nav)}</p>
     <h3>${esc(system.h1)}</h3>
     <p>${esc(system.card)}</p>
@@ -111,12 +124,13 @@ export function systemCard(ctx, system) {
 export function stagePicker(ctx) {
   const buttons = ctx.SITE.stages.map((stage, i) =>
     `<button type="button" data-stage="${stage.id}" aria-pressed="${i === 0 ? 'true' : 'false'}">${esc(stage.label)} <span>${esc(stage.who)}</span></button>`).join('');
-  return `<div class="stage-picker" data-stage-picker role="group" aria-label="Business stage">${buttons}</div>`;
+  return `<div class="stage-picker" data-stage-picker role="group" aria-label="Business stage">${buttons}</div>
+  <p class="stage-hint">Pick your stage. Gold cards fit it now. The rest get added as you grow.</p>`;
 }
 
 export function pillarGrid(ctx) {
   const cards = ctx.SITE.pillars.map((pillar) =>
-    `<article class="pillar frame"><div class="frame-inner"><h3>${esc(pillar.title)}</h3><p>${esc(pillar.text)}</p></div></article>`).join('');
+    `<article class="pillar frame"><div class="frame-inner">${pillarArt(pillar.title)}<h3>${esc(pillar.title)}</h3><p>${esc(pillar.text)}</p></div></article>`).join('');
   return `<div class="pillar-grid">${cards}</div>`;
 }
 

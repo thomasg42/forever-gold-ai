@@ -122,7 +122,6 @@ p { margin: 0 0 0.8em; }
 .source { font-size: 0.92rem; }
 .source a { color: var(--silver-400); }
 .section-ivory .source a { color: var(--ink-soft); }
-.system-card.is-dim { opacity: 0.38; }
 .stage-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
 .stage-picker button { background: var(--black-800); color: var(--ivory); border: 1px solid var(--graphite-700); padding: 0 14px; font: inherit; }
 .stage-picker button[aria-pressed="true"] { background: var(--gold-500); color: var(--black-950); }
@@ -283,3 +282,60 @@ elevenlabs-convai { bottom: var(--tap) !important; }
   .nav-menu, .js .nav-menu { order: 4; }
   .header-phone.header-call-now { order: 5; margin-left: 4px; }
 }
+
+/* v3 (Thomas 2026-11-12): pictures in every box, frames that close, no dimmed cards. */
+/* The inner border now fills the card, so both lines meet at the bottom in a grid row of uneven text. */
+.frame { display: flex; flex-direction: column; }
+.frame-inner { flex: 1 1 auto; display: flex; flex-direction: column; }
+.frame-inner > .text-link, .frame-inner > .card-action { margin-top: auto; align-self: flex-start; }
+.art-panel { margin: -16px -16px 16px; height: 116px; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, rgba(212,165,55,0.20), rgba(212,165,55,0) 68%), var(--black-900); border-bottom: 1px solid var(--gold-600); }
+.art { width: auto; height: 92px; max-width: 86%; fill: none; stroke: var(--gold-300); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.art .fill { fill: var(--gold-500); stroke: none; }
+.art .ink { stroke: var(--black-950); stroke-width: 2.6; }
+.art .thick { stroke-width: 3.4; }
+.art .dash { stroke-dasharray: 4 6; stroke: var(--silver-400); }
+.art .ring { stroke: var(--gold-500); }
+.art .back { fill: var(--black-900); }
+.card-stage { align-self: flex-start; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; margin-bottom: 10px; border: 1px solid var(--graphite-700); color: var(--silver-200); }
+.system-card.is-match .card-stage { background: var(--gold-500); border-color: var(--gold-500); color: var(--black-950); }
+.system-card.is-match { border-color: var(--gold-300); box-shadow: 0 0 0 1px var(--gold-500), 0 10px 30px rgba(212,165,55,0.14); }
+.system-card .frame-inner { border-color: var(--graphite-700); }
+.system-card.is-match .frame-inner { border-color: var(--gold-500); }
+.stage-hint { color: var(--silver-400); margin: -6px 0 18px; }
+.section-ivory .stage-hint { color: var(--ink-soft); }
+.js-motion .art-panel .art { transition: transform 420ms ease; }
+.js-motion .reveal .art { transform: scale(0.92); }
+.js-motion .reveal.is-in .art { transform: none; }
+@media (min-width: 600px) {
+  .pillar-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 800px) {
+  .consult-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1000px) {
+  .pillar-grid:not(.consult-grid) { grid-template-columns: repeat(4, 1fr); }
+}
+.work-status { align-self: flex-start; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; margin-bottom: 10px; border: 1px dashed var(--silver-400); color: var(--silver-200); }
+.work-status.is-live { border: 1px solid var(--gold-500); background: var(--gold-500); color: var(--black-950); }
+.section-ivory .work-status { color: var(--ink); border-color: var(--ink-soft); }
+.section-ivory .work-status.is-live { color: var(--black-950); border-color: var(--gold-500); }
+.work-detail { color: var(--silver-400); font-size: 0.95rem; }
+.section-ivory .work-detail { color: var(--ink-soft); }
+.work-url { font-size: 0.9rem; color: var(--gold-300); overflow-wrap: anywhere; }
+.section-ivory .work-url { color: var(--gold-800); }
+.audit-intro { padding-bottom: 4px; }
+.audit-intro h1 { margin-bottom: 0.2em; }
+.audit-intro .lead { margin-bottom: 0; }
+.audit-intro .btn-row { margin: 12px 0 0; }
+.audit-form-section { padding-top: 20px; }
+.page-intro.about-grid { align-items: center; padding-bottom: 36px; }
+.chapter { display: grid; gap: 20px; align-items: center; }
+.chapter .prose h2 { margin-top: 0; }
+.chapter-art { max-width: 360px; width: 100%; }
+.chapter-art .frame-inner { padding: 0; }
+.chapter-art .art-panel { margin: 0; height: 170px; border-bottom: 0; }
+.chapter-art .art { height: 130px; }
+@media (min-width: 800px) {
+  .chapter { grid-template-columns: 300px 1fr; gap: 40px; }
+}
+form[data-lead] a, form[data-lead] .text-link { color: var(--gold-800); }

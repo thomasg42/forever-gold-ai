@@ -30,6 +30,7 @@ import {
 } from './components.mjs';
 import { CONSULT_FAQS, FAQ_TEASER, FAQS } from './faqs.mjs';
 import { SYSTEM_COPY } from './systems-copy.mjs';
+import { art, coverArt } from './art.mjs';
 
 const esc = (s) => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -83,7 +84,7 @@ const STAKES = [
 ];
 
 function coversGrid({ full = false } = {}) {
-  const cards = COVERS.filter((item) => full || !item.full).map((item) => `<article class="pillar frame reveal" data-cover="${item.id}"><div class="frame-inner"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></div></article>`).join('');
+  const cards = COVERS.filter((item) => full || !item.full).map((item) => `<article class="pillar frame reveal" data-cover="${item.id}"><div class="frame-inner">${coverArt(item.id)}<h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></div></article>`).join('');
   return `<div class="pillar-grid consult-grid">${cards}</div>`;
 }
 
@@ -351,50 +352,152 @@ ${ctaBand(ctx, { title: 'Want this standard on your tools?', href: ctx.link('fre
 
 function workPage(ctx) {
   const items = shownWork();
-  const card = (item) => `<article class="work-card frame"><div class="frame-inner">
-    <p class="kicker">${esc(item.label)}</p>
-    <h2>${esc(item.title)}</h2>
+  const card = (item) => `<article class="work-card frame reveal" data-work="${esc(item.id)}"><div class="frame-inner">
+    ${art(item.art)}
+    <p class="work-status${item.status === 'Live' ? ' is-live' : ''}" data-status>${esc(item.status)}</p>
+    <h3>${esc(item.title)}</h3>
     <p>${esc(item.text)}</p>
-    ${item.detail ? `<p>${esc(item.detail)}</p>` : ''}
-    <p><a class="btn btn-gold" href="${esc(item.url)}" target="_blank" rel="noopener">Open ${esc(item.title)}</a></p>
+    ${item.detail ? `<p class="work-detail">${esc(item.detail)}</p>` : ''}
+    <p class="work-url">${esc(item.url.replace(/^https:\/\//, '').replace(/\/$/, ''))}</p>
+    <p class="card-action"><a class="btn btn-gold" href="${esc(item.url)}" target="_blank" rel="noopener">Open ${esc(item.title)}</a></p>
   </div></article>`;
-  const demos = items.filter((item) => item.group === 'demo').map(card).join('');
-  const tools = items.filter((item) => item.group === 'tool').map(card).join('');
+  const group = (id) => items.filter((item) => item.group === id).map(card).join('');
+  const own = group('own');
+  const demos = group('demo');
+  const clients = group('client');
   return `${crumbs(ctx, [{ path: '', name: 'Home' }, { path: 'work', name: 'Work' }])}
-${pageHead('Work', 'See it working.', 'Demo websites, plus the tools Forever Gold AI built and runs.')}
-<section class="section"><div class="wrap"><h2>Demo websites</h2><div class="card-grid">${demos}</div></div></section>
-<section class="section section-ivory"><div class="wrap"><h2>Tools we built and run</h2><div class="card-grid">${tools}</div></div></section>
+${pageHead('Work', 'See it working.', 'Open any of these on your phone. Each card says plainly whether it is live or a demo. Demos run on sample data, and some are still being finished.')}
+<section class="section"><div class="wrap">
+  <p class="kicker">Our own business</p>
+  <h2>Gold Mobile Mechanic</h2>
+  <p class="lead">Forever Gold AI owns a mobile mechanic business and builds on it first. If it works there, it gets built for you.</p>
+  <div class="card-grid">${own}</div>
+</div></section>
+<section class="section section-ivory"><div class="wrap">
+  <p class="kicker">Demos and tools</p>
+  <h2>Try the demos.</h2>
+  <p class="lead">These show how a system works. They use made-up people and sample data, not real customers.</p>
+  <div class="card-grid">${demos}</div>
+</div></section>
+${clients ? `<section class="section"><div class="wrap">
+  <p class="kicker">Client websites</p>
+  <h2>Live for real businesses.</h2>
+  <div class="card-grid">${clients}</div>
+</div></section>` : ''}
 ${ctaBand(ctx, { title: 'Want this working in your business?', href: ctx.link('free-audit'), lead: 'Tell us what hurts. We will show you the first systems worth building.' })}`;
 }
+
+// Thomas's own story, in his order (2026-11-12). No employer, client or prospect is named.
+const ABOUT_STORY = [
+  {
+    kicker: 'Where it started',
+    art: 'crew',
+    title: 'Seven years running a restaurant.',
+    text: [
+      'Thomas Gutierrez spent seven years as a restaurant general manager, and he built the systems that kept it running: how a shift opens and closes, how a new hire learns the job, how nothing gets missed on a busy night.',
+      'Then the boss wanted to keep running it the old way, and the old way made the work harder than it needed to be. Thomas was not okay with that, so he stepped down.',
+    ],
+  },
+  {
+    kicker: 'Forever Gold AI',
+    art: 'followup',
+    title: 'An AI consultant in Bozeman, Montana.',
+    text: [
+      'He started Forever Gold AI to help other owners. Talking with them, he kept hearing the same thing: they want the modern tools, but nobody has shown them how to bring AI into the business they already run.',
+      'It was a slow start. He took it one owner at a time, and he kept building.',
+    ],
+  },
+  {
+    kicker: 'He built his own first',
+    art: 'mechanic',
+    title: 'A mechanic business with no paper.',
+    text: [
+      'Thomas has always been good with cars, so he started Gold Mobile Mechanic, a mechanic business Forever Gold AI owns, and built it to run without paper. Customers can look up their invoices and the work done on their vehicle online, so nothing gets lost. Online payment is the next piece.',
+      'Paper gets lost, misplaced and never entered, and it makes more work than the job itself. In 2026, Thomas does not believe a business should run on paper.',
+    ],
+  },
+  {
+    kicker: 'A memory that grows',
+    art: 'customers',
+    title: 'Tell it once. It remembers.',
+    text: [
+      'Everything Thomas does goes into one memory base that works on every device he uses. It remembers each customer, each job and each decision, and it keeps growing as the business grows.',
+      'It fits him because it was built around his own work. That is why he started building the same thing for other owners, customized to each of them.',
+    ],
+  },
+  {
+    kicker: 'What it looks like',
+    art: 'jobsite',
+    title: 'One job. Everyone on the same page.',
+    text: [
+      'For a construction business, Thomas built a jobsite demo. Every job gets one folder: photos, the quote, change orders, invoices and receipts. A second copy is kept safe, and the bookkeeper sees the same files. It is a demo with sample data, not a live client system.',
+      'He also studies apps that already work well, has his AI agents walk through every screen, and rebuilds the useful parts around your business. You get tools that fit how you work, instead of a stack of subscriptions that each do one piece.',
+    ],
+    link: { slug: 'work', text: 'See the demos' },
+  },
+];
 
 function aboutPage(ctx) {
   const photo = ctx.SITE.photos.thomas
     ? `<img src="${ctx.asset(ctx.SITE.photos.thomas)}" alt="Thomas Gutierrez" width="800" height="1000">`
     : '';
   const socials = ctx.SITE.socials.map((item) => `<li><a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.name)}</a></li>`).join('');
+  const chapters = ABOUT_STORY.map((part, i) => `<section class="section${i % 2 ? '' : ' section-ivory'}" data-chapter="${i + 1}"><div class="wrap chapter reveal">
+  <div class="chapter-art frame"><div class="frame-inner">${art(part.art)}</div></div>
+  <div class="prose">
+  <p class="kicker">${esc(part.kicker)}</p>
+  <h2>${esc(part.title)}</h2>
+  ${part.text.map((line) => `<p>${esc(line)}</p>`).join('\n  ')}
+  ${part.link ? `<p><a class="text-link" href="${ctx.link(part.link.slug)}">${esc(part.link.text)}</a></p>` : ''}
+  </div>
+</div></section>`).join('\n');
   return `${crumbs(ctx, [{ path: '', name: 'Home' }, { path: 'about', name: 'About' }])}
-${pageHead('About', 'Thomas Gutierrez, AI consultant', 'The founder of Forever Gold AI, and the person who comes into your business.')}
-<section class="section"><div class="wrap prose about-grid">
+<header class="page-intro wrap about-grid">
   <div>
+    <p class="kicker">About</p>
+    <h1>Thomas Gutierrez, AI consultant</h1>
     <blockquote class="guide-quote"><p>Seven years as a restaurant general manager taught me a business runs on systems, not on how hard the owner works.</p></blockquote>
-    <p>Thomas Gutierrez is an AI consultant based in Bozeman, Montana, and the founder of Forever Gold AI. He goes into a business, finds what is holding it back, takes the pressure off the owner, and builds the systems that fix it.</p>
-    <p>Everything is customized. If he has built it for himself, he can build it for you. He runs his own business on the same systems, including Gold Mobile Mechanic, the mechanic business Forever Gold AI owns.</p>
-    <p>Built in Montana. Working with businesses anywhere. Meetings are in person or on Google Meet.</p>
-    <ul class="link-list">${socials}</ul>
+    <p class="lead">The founder of Forever Gold AI, and the person who comes into your business.</p>
+    ${actionRow(ctx)}
   </div>
   ${photo}
+</header>
+${chapters}
+<section class="section"><div class="wrap prose">
+  <p>Built in Montana. Working with businesses anywhere. Meetings are in person or on Google Meet.</p>
+  <ul class="link-list">${socials}</ul>
 </div></section>
 ${ctaBand(ctx, { title: 'Talk with Thomas.', href: ctx.link('free-audit'), lead: 'Free AI consultant audit, or a free 15-minute call.' })}`;
 }
 
+// Form first (Thomas 2026-11-12): the form sits right under a short heading and a Call Now button. The why comes after.
 function auditPage(ctx) {
   return `${crumbs(ctx, [{ path: '', name: 'Home' }, { path: 'free-audit', name: 'Free AI consultant audit' }])}
-${pageHead('Free AI consultant audit', 'Sit down with an AI consultant. Free.', 'AI changes every month. A free audit with AI consultant Thomas Gutierrez shows you what is out there right now and where it fits your business.')}
+<header class="page-intro wrap audit-intro">
+  <p class="kicker">Free AI consultant audit</p>
+  <h1>Free audit.</h1>
+  <p class="lead">Tell us about your business. Thomas calls you back. Rather talk now? Call.</p>
+  <div class="btn-row">
+    <a class="btn btn-gold" href="${ctx.tel}" aria-label="${callLabel(ctx)}" data-call-now>Call Now · ${esc(ctx.SITE.phone.display)}</a>
+  </div>
+</header>
+<section class="section audit-form-section" id="audit-form"><div class="wrap form-layout">
+  <div>
+    <h2>What about your business?</h2>
+    ${auditForm(ctx)}
+  </div>
+  <aside class="form-aside">
+    <p>Rather talk to the AI consultant now?</p>
+    <p><a class="btn btn-gold" href="${ctx.tel}" aria-label="${callLabel(ctx)}" data-call-now>Call Now · ${esc(ctx.SITE.phone.display)}</a></p>
+    <p><a class="btn btn-ghost" href="${ctx.sms}">Text Thomas</a></p>
+    <p>${bookLink(ctx)}</p>
+  </aside>
+</div></section>
 <section class="section section-ivory"><div class="wrap">
   <div class="reveal">
     <p class="kicker">Why owners ask for it</p>
     <h2>You keep hearing AI can run half your office. Nobody has shown you which half.</h2>
-    <p>Thomas is an AI consultant based in Bozeman, Montana. He builds AI operations and AI systems, and he runs his own business on them.</p>
+    <p>AI changes every month. Thomas Gutierrez is an AI consultant based in Bozeman, Montana. He builds AI operations and AI systems, and he runs his own business on them.</p>
   </div>
   <div class="reveal">
     <h2>What the AI consultant looks at</h2>
@@ -404,18 +507,6 @@ ${pageHead('Free AI consultant audit', 'Sit down with an AI consultant. Free.', 
       <li><span>The first three systems worth building.</span></li>
     </ol>
   </div>
-</div></section>
-<section class="section"><div class="wrap form-layout">
-  <div>
-    <h2 class="reveal">Request your free AI consultant audit</h2>
-    ${auditForm(ctx)}
-  </div>
-  <aside class="form-aside">
-    <p>Rather talk to the AI consultant now?</p>
-    <p><a class="btn btn-gold" href="${ctx.tel}" aria-label="${callLabel(ctx)}" data-call-now>Call Now · ${esc(ctx.SITE.phone.display)}</a></p>
-    <p><a class="btn btn-ghost" href="${ctx.sms}">Text Thomas</a></p>
-    <p>${bookLink(ctx)}</p>
-  </aside>
 </div></section>`;
 }
 
@@ -527,8 +618,8 @@ const DESCRIPTIONS = {
   stages: 'Start, Grow, and Scale. See the signs of each stage, what breaks first, what to build first, and why the next stage gets easier.',
   numbers: 'Verified research on missed-call callbacks and small-business AI use, plus two calculators that use only the numbers you type.',
   gold: 'How Forever Gold AI takes mistakes out: type a fact once, check before acting, flag every failure, and keep a person where it matters.',
-  work: 'See Gold Mobile Mechanic and the tools Forever Gold AI runs, including GoldSign, Crew Start, and Document Processing.',
-  about: 'Thomas Gutierrez, AI consultant and founder of Forever Gold AI in Bozeman, Montana. Seven years as a restaurant GM, now building AI systems for owners.',
+  work: 'See Gold Mobile Mechanic, the Forever Gold CRM demo, a construction jobsite demo, GoldSign and more. Every card says whether it is live or a demo.',
+  about: 'Thomas Gutierrez went from seven years as a restaurant GM to AI consultant in Bozeman, Montana. He builds paperless systems that remember your business.',
   audit: 'Free audit with an AI consultant. Thomas looks at your calls, leads, scheduling, quotes, and invoices, shows what AI can do now, and names the first systems.',
   contact: 'Call or text Thomas at (406) 698-6693, book a free 15-minute call, or send a short note. Forever Gold AI is based in Bozeman, Montana.',
   faq: 'Straight answers on AI consulting, tech skill, breakdowns, later changes, voice, staff, cost, timing, working outside Montana, and the tools.',

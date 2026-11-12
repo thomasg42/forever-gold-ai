@@ -55,6 +55,8 @@ export function bootNav(doc) {
   });
 }
 
+const NAMES = { start: 'Start', grow: 'Grow', scale: 'Scale' };
+
 export function bootStages(doc) {
   const picker = doc.querySelector('[data-stage-picker]');
   if (!picker) return;
@@ -66,7 +68,10 @@ export function bootStages(doc) {
     });
     cards.forEach((card) => {
       const list = (card.getAttribute('data-stages') || '').split(/\s+/);
-      card.classList.toggle('is-dim', !list.includes(stage));
+      const fits = list.includes(stage);
+      card.classList.toggle('is-match', fits);
+      const tag = card.querySelector('[data-card-stage]');
+      if (tag) tag.textContent = fits ? `Fits ${NAMES[stage]}` : `Add at ${NAMES[list[0]]}`;
     });
   };
   buttons.forEach((button) => {
