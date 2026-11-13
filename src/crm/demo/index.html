@@ -1615,6 +1615,25 @@ function moneyChain(board) {
       : `${fmtMoney(board.backPerDollar)} back for every $1 of ads.`));
 }
 
+const PIXEL_LABELS = { PageView: 'Pages opened', CallIntent: 'Call taps, all visitors', Lead: 'Inquiries sent', Contact: 'Contact taps' };
+const PIXEL_NOTES = { CallIntent: 'A tap, not a finished call' };
+
+// The website pixel counts every visitor, not only ad clicks. Event names come from Meta, so they are text only.
+function pixelBlock(pixel) {
+  const title = h('h3', { class: 'board-title' }, 'From your website pixel');
+  if (pixel.error) {
+    return [title, h('p', { class: 'note' }, `The pixel counts could not load right now. This does not mean zero.${pixel.detail ? ` (${pixel.detail})` : ''}`)];
+  }
+  const names = Object.keys(pixel.events).sort((a, b) => pixel.events[b] - pixel.events[a]);
+  return [
+    title,
+    names.length
+      ? h('dl', { class: 'stats' }, names.map((name) => statBox(PIXEL_LABELS[name] || name, count(pixel.events[name]), PIXEL_NOTES[name] || null)))
+      : h('p', { class: 'note' }, 'Meta reports no pixel events in these dates.'),
+    h('p', { class: 'note' }, `Pixel ${pixel.datasetId}. It counts everyone on the website, not only people who came from an ad.${pixel.partial ? ' Very busy dates may show a little low.' : ''}`),
+  ];
+}
+
 function adsBoard(board) {
   const { totals, forms, funnel, costs } = board;
   const fromYourRecords = funnel.notRecorded ? `${funnel.notRecorded} not recorded` : null;
@@ -1629,6 +1648,7 @@ function adsBoard(board) {
       statBox('Link clicks', count(totals.linkClicks), moneyOr(costs.perLinkClick, null) && `${fmtMoney(costs.perLinkClick)} per click`),
       statBox('Page views', count(totals.landingPageViews)),
       statBox('Call button taps', count(totals.callTaps), 'A tap, not a finished call')),
+    ...(board.pixel ? pixelBlock(board.pixel) : []),
     h('h3', { class: 'board-title' }, 'From your records'),
     h('dl', { class: 'stats' },
       statBox('Inquiries in these dates', count(forms.total), `${count(forms.fromAds)} from ads, ${count(forms.otherSource)} other${forms.addedByHand ? `, ${count(forms.addedByHand)} added by hand` : ''}`),
